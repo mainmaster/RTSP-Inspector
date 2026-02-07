@@ -1,0 +1,58 @@
+name: Build Binaries
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Используем разные ОС для сборки разных бинарников
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            suffix: .exe
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            suffix: ""
+          - os: darwin
+            arch: arm64
+            runner: macos-latest
+            suffix: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      # Для Linux нужны системные библиотеки для работы с графикой и X11
+      - name: Install Linux dependencies
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev libwayland-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxxf86vm-dev
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Build
+        shell: bash
+        run: |
+          mkdir -p dist
+          # На родных раннерах переменные GOOS и GOARCH подставятся автоматически,
+          # а CGO будет включен по умолчанию для сборки UI.
+          go build -v -o dist/app-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.suffix }} ./cmd/ui
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/
