@@ -1,6 +1,8 @@
 package rtsp
 
-import "regexp"
+import (
+	"regexp"
+)
 
 func findParam(header, pattern string) string {
 	re := regexp.MustCompile(pattern)
