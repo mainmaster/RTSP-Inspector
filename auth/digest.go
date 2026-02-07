@@ -2,17 +2,26 @@ package auth
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"fmt"
+	"io"
 )
 
 type DigestAuth struct {
 	User, Pass, Realm, Nonce, URL string
 }
 
+// Вспомогательная функция для MD5 хеша от строки
+func md5Sum(data string) string {
+	h := md5.New()
+	io.WriteString(h, data)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 func (a *DigestAuth) Calc(method string) string {
-	ha1 := fmt.Sprintf("%x", md5.Sum([]byte(a.User+":"+a.Realm+":"+a.Pass)))
-	ha2 := fmt.Sprintf("%x", md5.Sum([]byte(method+":"+a.URL)))
-	return fmt.Sprintf("%x", md5.Sum([]byte(ha1+":"+a.Nonce+":"+ha2)))
+	ha1 := md5Sum(fmt.Sprintf("%s:%s:%s", a.User, a.Realm, a.Pass))
+	ha2 := md5Sum(fmt.Sprintf("%s:%s", method, a.URL))
+	return md5Sum(fmt.Sprintf("%s:%s:%s", ha1, a.Nonce, ha2))
 }
 
 func (a *DigestAuth) GetHeader(method string) string {
