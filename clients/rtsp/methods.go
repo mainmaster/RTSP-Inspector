@@ -10,6 +10,12 @@ import (
 	"strings"
 )
 
+const (
+	realmRegEx = `realm="([^"]+)"`
+	nonceRegEx = `nonce="([^"]+)"`
+	authHeader = "WWW-Authenticate"
+)
+
 func (c *Client) send(method string) (*types.Response, error) {
 	c.cseq++
 
@@ -24,9 +30,9 @@ func (c *Client) send(method string) (*types.Response, error) {
 	}
 
 	if resp.StatusCode == 401 {
-		authHeader := resp.Header.Get("WWW-Authenticate")
-		c.digestAuth.Realm = findParam(authHeader, `realm="([^"]+)"`)
-		c.digestAuth.Nonce = findParam(authHeader, `nonce="([^"]+)"`)
+		authHeader := resp.Header.Get(authHeader)
+		c.digestAuth.Realm = findParam(authHeader, realmRegEx)
+		c.digestAuth.Nonce = findParam(authHeader, nonceRegEx)
 
 		c.cseq++
 		reqAuth := c.buildRequest(method, true)
@@ -81,7 +87,6 @@ func (c *Client) readResponse() (*types.Response, error) {
 	reader := bufio.NewReader(c.conn)
 	tp := textproto.NewReader(reader)
 
-	// 1. Читаем статусную строку
 	line, err := tp.ReadLine()
 	if err != nil {
 		return nil, err

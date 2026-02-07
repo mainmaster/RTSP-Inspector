@@ -11,13 +11,6 @@ type DigestAuth struct {
 	User, Pass, Realm, Nonce, URL string
 }
 
-// Вспомогательная функция для MD5 хеша от строки
-func md5Sum(data string) string {
-	h := md5.New()
-	io.WriteString(h, data)
-	return hex.EncodeToString(h.Sum(nil))
-}
-
 func (a *DigestAuth) Calc(method string) string {
 	ha1 := md5Sum(fmt.Sprintf("%s:%s:%s", a.User, a.Realm, a.Pass))
 	ha2 := md5Sum(fmt.Sprintf("%s:%s", method, a.URL))
@@ -27,4 +20,10 @@ func (a *DigestAuth) Calc(method string) string {
 func (a *DigestAuth) GetHeader(method string) string {
 	return fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", response="%s"`,
 		a.User, a.Realm, a.Nonce, a.URL, a.Calc(method))
+}
+
+func md5Sum(data string) string {
+	h := md5.New()
+	io.WriteString(h, data)
+	return hex.EncodeToString(h.Sum(nil))
 }
