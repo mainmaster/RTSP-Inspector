@@ -73,6 +73,7 @@ func (c *Client) buildRequest(method types.RTSPMethod, useAuth bool) string {
 	b.WriteString("User-Agent: RTSP-Inspector")
 	b.WriteString("\r\n")
 	b.WriteString("\r\n")
+
 	return b.String()
 }
 

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"rtsp-inspector/clients/rtsp"
-	"time"
 )
 
 func main() {
@@ -14,7 +13,6 @@ func main() {
 	}
 	res, err := c.Options()
 	fmt.Println(res, err)
-	time.Sleep(2 * time.Second)
 	res, err = c.Describe()
 	fmt.Println(res, err)
 }
