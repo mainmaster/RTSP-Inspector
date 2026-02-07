@@ -56,29 +56,6 @@ func (c *Client) do(method types.RTSPMethod) (*types.Response, error) {
 	}, nil
 }
 
-func (c *Client) Options() (*types.Response, error) {
-	return c.do(types.MethodOptions)
-}
-
-func (c *Client) Describe() (*types.Response, error) {
-	return c.do(types.MethodDescribe)
-}
-
-func (c *Client) Setup(args ...interface{}) {
-
-}
-
-func (c *Client) Play(args ...interface{}) {
-
-}
-
-func (c *Client) Teardown(args ...interface{}) {
-	c.do("TEARDOWN")
-	if c.conn != nil {
-		c.conn.Close()
-	}
-}
-
 func (c *Client) buildRequest(method types.RTSPMethod, useAuth bool) string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("%s %s RTSP/1.0", method, c.rtspURL.String()))
