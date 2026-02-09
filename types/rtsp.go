@@ -2,8 +2,6 @@ package types
 
 import (
 	"net/textproto"
-
-	"github.com/pixelbender/go-sdp/sdp"
 )
 
 type Headers struct {
@@ -14,6 +12,5 @@ type Headers struct {
 
 type Response struct {
 	Headers
-	Body       []byte
-	SDPSession *sdp.Session
+	Body []byte
 }

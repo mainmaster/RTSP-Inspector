@@ -1,12 +1,14 @@
 package rtsp
 
 import (
+	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"net/textproto"
+	"net/url"
 	"rtsp-inspector/types"
 	"strconv"
-	"strings"
 )
 
 const (
@@ -15,11 +17,23 @@ const (
 	authHeader = "WWW-Authenticate"
 )
 
-func (c *Client) do(method types.RTSPMethod) (*types.Response, error) {
-	c.cseq++
+func (c *Client) Do(req *Request) (*types.Response, error) {
+	req.AddCSeq()
 
-	req := c.buildRequest(method, c.digestAuth.Nonce != "")
-	if _, err := c.conn.Write([]byte(req)); err != nil {
+	if c.conn == nil {
+		u, err := url.Parse(req.URL)
+		if err != nil {
+			return nil, err
+		}
+		err = c.Connect(u.Host)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	buildReq := req.Build()
+	fmt.Printf(buildReq)
+	if _, err := c.conn.Write([]byte(buildReq)); err != nil {
 		return nil, err
 	}
 
@@ -30,12 +44,14 @@ func (c *Client) do(method types.RTSPMethod) (*types.Response, error) {
 
 	if h.StatusCode == 401 {
 		authHeaderVal := h.Header.Get(authHeader)
-		c.digestAuth.Realm = findParam(authHeaderVal, realmRegEx)
-		c.digestAuth.Nonce = findParam(authHeaderVal, nonceRegEx)
+		req.SetRealm(findParam(authHeaderVal, realmRegEx))
+		req.SetNonce(findParam(authHeaderVal, nonceRegEx))
 
-		c.cseq++
-		reqAuth := c.buildRequest(method, true)
-		if _, err := c.conn.Write([]byte(reqAuth)); err != nil {
+		req.AddCSeq()
+
+		buildReq = req.Build()
+		fmt.Printf(buildReq)
+		if _, err := c.conn.Write([]byte(buildReq)); err != nil {
 			return nil, err
 		}
 
@@ -54,27 +70,6 @@ func (c *Client) do(method types.RTSPMethod) (*types.Response, error) {
 		Headers: h,
 		Body:    body,
 	}, nil
-}
-
-func (c *Client) buildRequest(method types.RTSPMethod, useAuth bool) string {
-	var b strings.Builder
-	b.WriteString(fmt.Sprintf("%s %s RTSP/1.0", method, c.rtspURL.String()))
-	b.WriteString("\r\n")
-	b.WriteString(fmt.Sprintf("CSeq: %d", c.cseq))
-	b.WriteString("\r\n")
-	if method == types.MethodDescribe {
-		b.WriteString("Accept: application/sdp")
-		b.WriteString("\r\n")
-	}
-	if useAuth {
-		b.WriteString(fmt.Sprintf("Authorization: %s", c.digestAuth.GetHeader(method)))
-		b.WriteString("\r\n")
-	}
-	b.WriteString("User-Agent: RTSP-Inspector")
-	b.WriteString("\r\n")
-	b.WriteString("\r\n")
-
-	return b.String()
 }
 
 func (c *Client) readHeaders() (types.Headers, error) {
@@ -116,4 +111,20 @@ func (c *Client) readBody(headers textproto.MIMEHeader) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+func (c *Client) Connect(host string) error {
+	conn, err := net.Dial("tcp", host)
+	if err != nil {
+		return err
+	}
+	c.conn = conn
+	c.reader = bufio.NewReader(conn)
+	c.tp = textproto.NewReader(c.reader)
+
+	return nil
+}
+
+func (c *Client) Close() error {
+	return c.conn.Close()
 }
