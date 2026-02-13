@@ -18,22 +18,29 @@ const (
 )
 
 func (c *Client) Do(req *Request) (*types.Response, error) {
-	req.AddCSeq()
+	u, err := url.Parse(req.URL)
+	if err != nil {
+		return nil, err
+	}
 
 	if c.conn == nil {
-		u, err := url.Parse(req.URL)
-		if err != nil {
-			return nil, err
-		}
 		err = c.Connect(u.Host)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	buildReq := req.Build()
-	fmt.Printf(buildReq)
-	if _, err := c.conn.Write([]byte(buildReq)); err != nil {
+	c.csec++
+	req.SetCSeq(c.csec)
+
+	c.setCredentialsFromURL(*u)
+
+	if c.digestAuth.Nonce != "" {
+		req.Header.Add("Authorization", c.digestAuth.GetHeader(req.Method, req.URL))
+	}
+
+	x := req.Build()
+	if _, err := c.conn.Write([]byte(x)); err != nil {
 		return nil, err
 	}
 
@@ -44,14 +51,11 @@ func (c *Client) Do(req *Request) (*types.Response, error) {
 
 	if h.StatusCode == 401 {
 		authHeaderVal := h.Header.Get(authHeader)
-		req.SetRealm(findParam(authHeaderVal, realmRegEx))
-		req.SetNonce(findParam(authHeaderVal, nonceRegEx))
+		c.digestAuth.Realm = findParam(authHeaderVal, realmRegEx)
+		c.digestAuth.Nonce = findParam(authHeaderVal, nonceRegEx)
+		req.SetCSeq(c.csec + 1)
 
-		req.AddCSeq()
-
-		buildReq = req.Build()
-		fmt.Printf(buildReq)
-		if _, err := c.conn.Write([]byte(buildReq)); err != nil {
+		if _, err = c.conn.Write([]byte(req.Build())); err != nil {
 			return nil, err
 		}
 
@@ -127,4 +131,17 @@ func (c *Client) Connect(host string) error {
 
 func (c *Client) Close() error {
 	return c.conn.Close()
+}
+
+func (c *Client) setCredentialsFromURL(u url.URL) {
+	pass, _ := u.User.Password()
+	username := u.User.Username()
+
+	c.digestAuth.Username = username
+	c.digestAuth.Password = pass
+}
+
+func (c *Client) SetCredentials(credentials Credentials) {
+	c.digestAuth.Username = credentials.Username
+	c.digestAuth.Password = credentials.Password
 }

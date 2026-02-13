@@ -2,8 +2,6 @@ package rtsp
 
 import (
 	"fmt"
-	"net/url"
-	"rtsp-inspector/auth"
 	"rtsp-inspector/types"
 	"strconv"
 	"strings"
@@ -21,42 +19,16 @@ func (h Header) Add(key, value string) {
 }
 
 type Request struct {
-	Method      string
-	URL         string
-	Header      Header
-	Credentials Credentials
-	cseq        int
-	digestAuth  auth.DigestAuth
+	Method string
+	URL    string
+	Header Header
 }
 
 func NewRequest(method, rtspURL string) (*Request, error) {
-	u, err := url.Parse(rtspURL)
-	if err != nil {
-		return nil, err
-	}
-
-	pass, _ := u.User.Password()
-	username := u.User.Username()
-
-	clearURL, err := url.Parse(rtspURL)
-	if err != nil {
-		return nil, err
-	}
-	clearURL.User = nil
-
 	return &Request{
 		Method: method,
-		URL:    clearURL.String(),
-		Credentials: Credentials{
-			Username: username,
-			Password: pass,
-		},
+		URL:    rtspURL,
 		Header: getDefaultHeaders(),
-		digestAuth: auth.DigestAuth{
-			User: username,
-			Pass: pass,
-			URL:  rtspURL,
-		},
 	}, nil
 }
 
@@ -66,17 +38,8 @@ func getDefaultHeaders() Header {
 	return header
 }
 
-func (r *Request) AddCSeq() {
-	r.cseq++
-	r.Header.Add("CSeq", strconv.Itoa(r.cseq))
-}
-
-func (r *Request) SetNonce(nonce string) {
-	r.digestAuth.Nonce = nonce
-}
-
-func (r *Request) SetRealm(realm string) {
-	r.digestAuth.Realm = realm
+func (r *Request) SetCSeq(cseq int) {
+	r.Header.Add("CSeq", strconv.Itoa(cseq))
 }
 
 func (r *Request) Build() string {
@@ -102,11 +65,6 @@ func (r *Request) Build() string {
 			b.WriteString("Accept: application/sdp")
 			b.WriteString("\r\n")
 		}
-	}
-
-	if r.digestAuth.Realm != "" {
-		b.WriteString(fmt.Sprintf("Authorization: %s", r.digestAuth.GetHeader(r.Method)))
-		b.WriteString("\r\n")
 	}
 	b.WriteString("\r\n")
 
