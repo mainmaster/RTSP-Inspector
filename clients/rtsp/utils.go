@@ -4,6 +4,12 @@ import (
 	"regexp"
 )
 
+const (
+	realmRegEx = `realm="([^"]+)"`
+	nonceRegEx = `nonce="([^"]+)"`
+	authHeader = "WWW-Authenticate"
+)
+
 func findParam(header, pattern string) string {
 	re := regexp.MustCompile(pattern)
 	matches := re.FindStringSubmatch(header)

@@ -7,14 +7,9 @@ import (
 	"net"
 	"net/textproto"
 	"net/url"
+	"rtsp-inspector/internal/common_errors"
 	"rtsp-inspector/types"
 	"strconv"
-)
-
-const (
-	realmRegEx = `realm="([^"]+)"`
-	nonceRegEx = `nonce="([^"]+)"`
-	authHeader = "WWW-Authenticate"
 )
 
 func (c *Client) Do(req *Request) (*types.Response, error) {
@@ -48,7 +43,10 @@ func (c *Client) Do(req *Request) (*types.Response, error) {
 		return nil, err
 	}
 
-	if h.StatusCode == 401 {
+	switch {
+	case c.digestAuth.Nonce != "" && h.StatusCode == 401:
+		return nil, common_errors.ErrBadCredentials
+	case h.StatusCode == 401:
 		authHeaderVal := h.Header.Get(authHeader)
 		c.digestAuth.Realm = findParam(authHeaderVal, realmRegEx)
 		c.digestAuth.Nonce = findParam(authHeaderVal, nonceRegEx)

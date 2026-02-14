@@ -1,12 +1,14 @@
 package ui
 
 import (
-	"fmt"
-	"rtsp-inspector/clients/rtsp" // замените на ваш путь
+	"image/color"
+	"rtsp-inspector/clients/rtsp"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 )
 
 func StartApp() {
@@ -14,52 +16,66 @@ func StartApp() {
 	window := myApp.NewWindow("RTSP Inspector")
 
 	ui := NewUIWidgets()
-	client := rtsp.Client{}
-	// В идеале данные для SetCredentials тоже брать из UI
-	client.SetCredentials(rtsp.Credentials{Username: "admin", Password: "password"})
+	client := &rtsp.Client{}
+	h := &Handlers{UI: ui, client: client}
 
-	// Назначаем действия кнопкам
-	ui.BtnOptions.OnTapped = func() {
-		req, _ := rtsp.NewRequest("OPTIONS", ui.URLEntry.Text)
-		res, err := client.Do(req)
-		if err != nil {
-			ui.AppendLog("Err: " + err.Error())
-			return
-		}
-		ui.AppendLog(fmt.Sprintf("[OPTIONS] %v", res))
-	}
+	// Привязываем события
+	ui.BtnConnect.OnTapped = h.HandleConnect
+	ui.BtnOptions.OnTapped = h.HandleOptions
+	ui.BtnSend.OnTapped = h.HandleSend
+	ui.BtnClear.OnTapped = func() { ui.LogOutput.SetText(""); ui.RequestBody.SetText("") }
 
-	ui.BtnDesc.OnTapped = func() {
-		req, _ := rtsp.NewRequest("DESCRIBE", ui.URLEntry.Text)
-		res, err := client.Do(req)
-		if err != nil {
-			ui.AppendLog("Err: " + err.Error())
-			return
-		}
-		ui.AppendLog(fmt.Sprintf("[DESCRIBE] SDP:\n%s", string(res.Body)))
-	}
-
-	ui.BtnClear.OnTapped = func() {
-		ui.LogOutput.SetText("")
-	}
-
-	// Верстка интерфейса
-	controls := container.NewVBox(
-		ui.URLEntry,
-		container.NewGridWithColumns(3, ui.BtnOptions, ui.BtnDesc, ui.BtnSetup),
-	)
-
-	footer := container.NewHBox(ui.BtnClear)
-
-	// Основной контент: Сверху кнопки, в центре лог (со скроллом)
+	// Сборка интерфейса по частям
 	content := container.NewBorder(
-		controls,
-		footer,
-		nil, nil,
-		container.NewScroll(ui.LogOutput),
+		makeTopPanel(ui),
+		makeBottomPanel(ui),
+		makeLeftPanel(ui),
+		nil,
+		makeCenterContent(ui),
 	)
 
-	window.SetContent(content)
-	window.Resize(fyne.NewSize(800, 600))
+	// Оборачиваем всё в Padded, чтобы контент не лип к рамке окна
+	window.SetContent(container.NewPadded(content))
+	window.Resize(fyne.NewSize(1000, 600))
 	window.ShowAndRun()
+}
+
+func makeTopPanel(ui *Widgets) fyne.CanvasObject {
+	connectRow := container.NewHBox(
+		ui.BtnConnect,
+		layout.NewSpacer(),
+	)
+
+	spacer := canvas.NewRectangle(color.Transparent)
+	spacer.SetMinSize(fyne.NewSize(0, 15))
+
+	return container.NewVBox(
+		ui.URLEntry,
+		connectRow,
+		spacer,
+	)
+}
+
+func makeLeftPanel(ui *Widgets) fyne.CanvasObject {
+	return container.NewVBox(
+		ui.BtnOptions,
+		// Сюда удобно добавлять новые кнопки методов (DESCRIBE, SETUP и т.д.)
+	)
+}
+
+func makeCenterContent(ui *Widgets) fyne.CanvasObject {
+	return container.NewBorder(
+		nil, nil, nil, nil,
+		container.NewGridWithColumns(2,
+			container.NewBorder(nil, nil, nil, ui.BtnSend, container.NewScroll(ui.RequestBody)),
+			container.NewScroll(ui.LogOutput),
+		),
+	)
+}
+
+func makeBottomPanel(ui *Widgets) fyne.CanvasObject {
+	return container.NewHBox(
+		layout.NewSpacer(),
+		ui.BtnClear,
+	)
 }

@@ -6,31 +6,39 @@ import (
 )
 
 type Widgets struct {
-	URLEntry   *widget.Entry
-	LogOutput  *widget.Entry
-	BtnOptions *widget.Button
-	BtnDesc    *widget.Button
-	BtnSetup   *widget.Button
-	BtnClear   *widget.Button
+	URLEntry    *widget.Entry
+	LogOutput   *widget.Entry
+	RequestBody *widget.Entry
+	BtnConnect  *widget.Button
+	BtnOptions  *widget.Button
+	BtnClear    *widget.Button
+	BtnSend     *widget.Button
 }
 
 func NewUIWidgets() *Widgets {
 	// Поле ввода URL
 	url := widget.NewEntry()
-	url.SetPlaceHolder("rtsp://admin:password@ip:554/stream")
+	url.SetText("rtsp://admin:qwerty123@192.168.31.176:554/RVi/1/1")
 
 	// Лог (многострочный)
 	log := widget.NewEntry()
 	log.MultiLine = true
-	log.Wrapping = fyne.TextWrapWord
+	log.MultiLine = true
+	log.Wrapping = fyne.TextWrapOff
+
+	requestBody := widget.NewEntry()
+	requestBody.MultiLine = true
+	log.MultiLine = true
+	log.Wrapping = fyne.TextWrapOff
 
 	return &Widgets{
-		URLEntry:   url,
-		LogOutput:  log,
-		BtnOptions: widget.NewButton("OPTIONS", nil),
-		BtnDesc:    widget.NewButton("DESCRIBE", nil),
-		BtnSetup:   widget.NewButton("SETUP", nil),
-		BtnClear:   widget.NewButton("Clear Log", nil),
+		URLEntry:    url,
+		LogOutput:   log,
+		RequestBody: requestBody,
+		BtnOptions:  widget.NewButton("OPTIONS", nil),
+		BtnConnect:  widget.NewButton("CONNECT", nil),
+		BtnClear:    widget.NewButton("Clear Log", nil),
+		BtnSend:     widget.NewButton("Send", nil),
 	}
 }
 

@@ -19,9 +19,10 @@ func (h Header) Add(key, value string) {
 }
 
 type Request struct {
-	Method string
-	URL    string
-	Header Header
+	Method  string
+	URL     string
+	Header  Header
+	Payload string
 }
 
 func NewRequest(method, rtspURL string) (*Request, error) {
