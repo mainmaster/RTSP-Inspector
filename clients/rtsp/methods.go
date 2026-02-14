@@ -39,8 +39,7 @@ func (c *Client) Do(req *Request) (*types.Response, error) {
 		req.Header.Add("Authorization", c.digestAuth.GetHeader(req.Method, req.URL))
 	}
 
-	x := req.Build()
-	if _, err := c.conn.Write([]byte(x)); err != nil {
+	if _, err := c.conn.Write([]byte(req.Build())); err != nil {
 		return nil, err
 	}
 
@@ -53,16 +52,7 @@ func (c *Client) Do(req *Request) (*types.Response, error) {
 		authHeaderVal := h.Header.Get(authHeader)
 		c.digestAuth.Realm = findParam(authHeaderVal, realmRegEx)
 		c.digestAuth.Nonce = findParam(authHeaderVal, nonceRegEx)
-		req.SetCSeq(c.csec + 1)
-
-		if _, err = c.conn.Write([]byte(req.Build())); err != nil {
-			return nil, err
-		}
-
-		h, err = c.readHeaders()
-		if err != nil {
-			return nil, err
-		}
+		return c.Do(req)
 	}
 
 	body, err := c.readBody(h.Header)
@@ -74,6 +64,14 @@ func (c *Client) Do(req *Request) (*types.Response, error) {
 		Headers: h,
 		Body:    body,
 	}, nil
+}
+
+func (c *Client) setCredentialsFromURL(u url.URL) {
+	pass, _ := u.User.Password()
+	username := u.User.Username()
+
+	c.digestAuth.Username = username
+	c.digestAuth.Password = pass
 }
 
 func (c *Client) readHeaders() (types.Headers, error) {
@@ -131,14 +129,6 @@ func (c *Client) Connect(host string) error {
 
 func (c *Client) Close() error {
 	return c.conn.Close()
-}
-
-func (c *Client) setCredentialsFromURL(u url.URL) {
-	pass, _ := u.User.Password()
-	username := u.User.Username()
-
-	c.digestAuth.Username = username
-	c.digestAuth.Password = pass
 }
 
 func (c *Client) SetCredentials(credentials Credentials) {

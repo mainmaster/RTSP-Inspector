@@ -11,11 +11,12 @@ func main() {
 	baseRTSP := "rtsp://admin:qwerty123@192.168.31.176:554/RVi/1/1"
 
 	c := rtsp.Client{}
-	c.SetCredentials(rtsp.Credentials{
-		Username: "admin",
-		Password: "qwerty123",
-	})
-
+	/*
+		c.SetCredentials(rtsp.Credentials{
+			Username: "admin",
+			Password: "qwerty123",
+		})
+	*/
 	req, err := rtsp.NewRequest("OPTIONS", baseRTSP)
 	//req.Header["kek"] = "zzz"
 	if err != nil {
