@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/textproto"
 	"net/url"
+	"rtsp-inspector/auth"
 	"rtsp-inspector/internal/common_errors"
 	"rtsp-inspector/types"
 	"strconv"
@@ -104,6 +105,8 @@ func (c *Client) readBody(headers textproto.MIMEHeader) ([]byte, error) {
 
 func (c *Client) Connect(u url.URL) error {
 	c.csec = 1
+	c.digestAuth = auth.DigestAuth{}
+
 	conn, err := net.Dial("tcp", u.Host)
 	if err != nil {
 		return err
@@ -146,4 +149,11 @@ func (c *Client) Close() error {
 func (c *Client) SetCredentials(credentials Credentials) {
 	c.digestAuth.Username = credentials.Username
 	c.digestAuth.Password = credentials.Password
+}
+
+func (c *Client) IsEmptyConnection() bool {
+	if c.conn == nil {
+		return true
+	}
+	return false
 }

@@ -11,6 +11,9 @@ type Widgets struct {
 	RequestBody *widget.Entry
 	BtnConnect  *widget.Button
 	BtnOptions  *widget.Button
+	BtnDescribe *widget.Button
+	BtnSetup    *widget.Button
+	BtnPlay     *widget.Button
 	BtnClear    *widget.Button
 	BtnSend     *widget.Button
 }
@@ -37,6 +40,9 @@ func NewUIWidgets() *Widgets {
 		RequestBody: requestBody,
 		BtnOptions:  widget.NewButton("OPTIONS", nil),
 		BtnConnect:  widget.NewButton("CONNECT", nil),
+		BtnDescribe: widget.NewButton("DESCRIBE", nil),
+		BtnSetup:    widget.NewButton("SETUP", nil),
+		BtnPlay:     widget.NewButton("PLAY", nil),
 		BtnClear:    widget.NewButton("Clear Log", nil),
 		BtnSend:     widget.NewButton("Send", nil),
 	}

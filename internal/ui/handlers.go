@@ -18,6 +18,11 @@ func (h *Handlers) HandleConnect() {
 		return
 	}
 
+	if !h.client.IsEmptyConnection() {
+		_ = h.client.Close()
+		h.UI.AppendLog("Close old connection")
+	}
+
 	u, err := url.Parse(h.UI.URLEntry.Text)
 	if err != nil {
 		h.UI.AppendLog("Error: " + err.Error())
@@ -29,6 +34,7 @@ func (h *Handlers) HandleConnect() {
 		h.UI.AppendLog("Error: " + err.Error())
 	}
 	h.UI.AppendLog("Connected: " + u.Host)
+	h.UI.BtnConnect.Text = "RECONNECT"
 }
 
 func (h *Handlers) HandleOptions() {
@@ -37,10 +43,30 @@ func (h *Handlers) HandleOptions() {
 	h.UI.RequestBody.SetText(payload.Build())
 }
 
+func (h *Handlers) HandleDescribe() {
+	req, _ := rtsp.NewRequest("DESCRIBE", h.UI.URLEntry.Text)
+	payload := h.client.GetPreparedPayload(*req)
+	h.UI.RequestBody.SetText(payload.Build())
+}
+
+func (h *Handlers) HandleSetup() {
+	req, _ := rtsp.NewRequest("SETUP", h.UI.URLEntry.Text)
+	req.TrackID = 1
+	payload := h.client.GetPreparedPayload(*req)
+	h.UI.RequestBody.SetText(payload.Build())
+}
+
+func (h *Handlers) HandlePlay() {
+	req, _ := rtsp.NewRequest("PLAY", h.UI.URLEntry.Text)
+	payload := h.client.GetPreparedPayload(*req)
+	h.UI.RequestBody.SetText(payload.Build())
+}
+
 func (h *Handlers) HandleSend() {
 	res, err := h.client.Send(h.UI.RequestBody.Text)
 	if err != nil {
 		h.UI.AppendLog("Error: " + err.Error())
+		h.UI.AppendLog("Reconnect please")
 		return
 	}
 	var output strings.Builder

@@ -21,7 +21,12 @@ func StartApp() {
 
 	// Привязываем события
 	ui.BtnConnect.OnTapped = h.HandleConnect
+
 	ui.BtnOptions.OnTapped = h.HandleOptions
+	ui.BtnDescribe.OnTapped = h.HandleDescribe
+	ui.BtnSetup.OnTapped = h.HandleSetup
+	ui.BtnPlay.OnTapped = h.HandlePlay
+
 	ui.BtnSend.OnTapped = h.HandleSend
 	ui.BtnClear.OnTapped = func() { ui.LogOutput.SetText(""); ui.RequestBody.SetText("") }
 
@@ -59,7 +64,9 @@ func makeTopPanel(ui *Widgets) fyne.CanvasObject {
 func makeLeftPanel(ui *Widgets) fyne.CanvasObject {
 	return container.NewVBox(
 		ui.BtnOptions,
-		// Сюда удобно добавлять новые кнопки методов (DESCRIBE, SETUP и т.д.)
+		ui.BtnDescribe,
+		ui.BtnSetup,
+		ui.BtnPlay,
 	)
 }
 
@@ -67,7 +74,7 @@ func makeCenterContent(ui *Widgets) fyne.CanvasObject {
 	return container.NewBorder(
 		nil, nil, nil, nil,
 		container.NewGridWithColumns(2,
-			container.NewBorder(nil, nil, nil, ui.BtnSend, container.NewScroll(ui.RequestBody)),
+			container.NewBorder(nil, nil, nil, container.NewVBox(ui.BtnSend), container.NewScroll(ui.RequestBody)),
 			container.NewScroll(ui.LogOutput),
 		),
 	)

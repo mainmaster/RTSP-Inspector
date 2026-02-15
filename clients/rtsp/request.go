@@ -22,7 +22,7 @@ type Request struct {
 	Method  string
 	URL     string
 	Header  Header
-	Payload string
+	TrackID int
 }
 
 func NewRequest(method, rtspURL string) (*Request, error) {
@@ -46,7 +46,12 @@ func (r *Request) SetCSeq(cseq int) {
 func (r *Request) Build() string {
 	var b strings.Builder
 
-	b.WriteString(fmt.Sprintf("%s %s RTSP/1.0", r.Method, r.URL))
+	url := r.URL
+	if r.Method == types.MethodSetup {
+		url = fmt.Sprintf("%s/trackID=%d", url, r.TrackID)
+	}
+
+	b.WriteString(fmt.Sprintf("%s %s RTSP/1.0", r.Method, url))
 	b.WriteString("\r\n")
 
 	for key, value := range r.Header {
