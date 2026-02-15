@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"rtsp-inspector/clients/rtsp"
 
 	"github.com/pixelbender/go-sdp/sdp"
@@ -11,6 +12,11 @@ func main() {
 	baseRTSP := "rtsp://admin:qwerty123@192.168.31.176:554/RVi/1/1"
 
 	c := rtsp.Client{}
+	u, _ := url.Parse(baseRTSP)
+	err := c.Connect(*u)
+	if err != nil {
+		panic(err)
+	}
 	/*
 		c.SetCredentials(rtsp.Credentials{
 			Username: "admin",

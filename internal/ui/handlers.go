@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"rtsp-inspector/clients/rtsp"
 )
@@ -23,7 +24,7 @@ func (h *Handlers) HandleConnect() {
 		return
 	}
 
-	err = h.client.Connect(u.Host)
+	err = h.client.Connect(*u)
 	if err != nil {
 		h.UI.AppendLog("Error: " + err.Error())
 	}
@@ -32,16 +33,25 @@ func (h *Handlers) HandleConnect() {
 
 func (h *Handlers) HandleOptions() {
 	req, _ := rtsp.NewRequest("OPTIONS", h.UI.URLEntry.Text)
-	h.UI.RequestBody.SetText(req.Build())
+	payload := h.client.GetPreparedPayload(*req)
+	h.UI.RequestBody.SetText(payload.Build())
 }
 
 func (h *Handlers) HandleSend() {
-	//req.Payload = h.UI.RequestBody.Text
-	res, err := h.client.Do(&req)
+	res, err := h.client.Send(h.UI.RequestBody.Text)
 	if err != nil {
 		h.UI.AppendLog("Error: " + err.Error())
 		return
 	}
-	h.UI.AppendLog(fmt.Sprintf("Status: %v", res.Body))
-	h.UI.AppendLog("Public: " + res.Header.Get("Public"))
+	var output strings.Builder
+
+	output.WriteString(res.StatusLine)
+	output.WriteString("\r\n")
+	for k, v := range res.Header {
+		output.WriteString(fmt.Sprintf("%s: %s", k, v[0]))
+		output.WriteString("\r\n")
+	}
+	output.WriteString("\r\n")
+	output.WriteString(string(res.Body))
+	h.UI.LogOutput.SetText(output.String())
 }

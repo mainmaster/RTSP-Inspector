@@ -13,44 +13,24 @@ import (
 )
 
 func (c *Client) Do(req *Request) (*types.Response, error) {
-	u, err := url.Parse(req.URL)
-	if err != nil {
-		return nil, err
+	if c.conn == nil {
+		return nil, common_errors.ErrNoConnection
 	}
 
-	if c.conn == nil {
-		err = c.Connect(u.Host)
-		if err != nil {
-			return nil, err
-		}
+	preparedReq := c.GetPreparedPayload(*req)
+	return c.Send(preparedReq.Build())
+}
+
+func (c *Client) Send(payload string) (*types.Response, error) {
+	if _, err := c.conn.Write([]byte(payload)); err != nil {
+		return nil, err
 	}
 
 	c.csec++
-	req.SetCSeq(c.csec)
-
-	c.setCredentialsFromURL(*u)
-
-	if c.digestAuth.Nonce != "" {
-		req.Header.Add("Authorization", c.digestAuth.GetHeader(req.Method, req.URL))
-	}
-
-	if _, err := c.conn.Write([]byte(req.Build())); err != nil {
-		return nil, err
-	}
 
 	h, err := c.readHeaders()
 	if err != nil {
 		return nil, err
-	}
-
-	switch {
-	case c.digestAuth.Nonce != "" && h.StatusCode == 401:
-		return nil, common_errors.ErrBadCredentials
-	case h.StatusCode == 401:
-		authHeaderVal := h.Header.Get(authHeader)
-		c.digestAuth.Realm = findParam(authHeaderVal, realmRegEx)
-		c.digestAuth.Nonce = findParam(authHeaderVal, nonceRegEx)
-		return c.Do(req)
 	}
 
 	body, err := c.readBody(h.Header)
@@ -62,6 +42,15 @@ func (c *Client) Do(req *Request) (*types.Response, error) {
 		Headers: h,
 		Body:    body,
 	}, nil
+}
+
+func (c *Client) GetPreparedPayload(req Request) Request {
+	req.SetCSeq(c.csec)
+
+	if c.digestAuth.Nonce != "" {
+		req.Header.Add("Authorization", c.digestAuth.GetHeader(req.Method, req.URL))
+	}
+	return req
 }
 
 func (c *Client) setCredentialsFromURL(u url.URL) {
@@ -113,8 +102,9 @@ func (c *Client) readBody(headers textproto.MIMEHeader) ([]byte, error) {
 	return body, nil
 }
 
-func (c *Client) Connect(host string) error {
-	conn, err := net.Dial("tcp", host)
+func (c *Client) Connect(u url.URL) error {
+	c.csec = 1
+	conn, err := net.Dial("tcp", u.Host)
 	if err != nil {
 		return err
 	}
@@ -122,6 +112,30 @@ func (c *Client) Connect(host string) error {
 	c.reader = bufio.NewReader(conn)
 	c.tp = textproto.NewReader(c.reader)
 
+	c.setCredentialsFromURL(u)
+
+	if c.digestAuth.Nonce == "" && c.digestAuth.Realm == "" {
+		return c.setDigestHeaders(u)
+	}
+	return nil
+}
+
+func (c *Client) setDigestHeaders(u url.URL) error {
+	u.User = nil
+
+	req, err := NewRequest("OPTIONS", u.String())
+	if err != nil {
+		return err
+	}
+
+	res, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+
+	authHeaderVal := res.Header.Get(authHeader)
+	c.digestAuth.Realm = findParam(authHeaderVal, realmRegEx)
+	c.digestAuth.Nonce = findParam(authHeaderVal, nonceRegEx)
 	return nil
 }
 

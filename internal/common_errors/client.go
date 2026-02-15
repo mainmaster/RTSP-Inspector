@@ -3,5 +3,5 @@ package common_errors
 import "errors"
 
 var (
-	ErrBadCredentials = errors.New("wrong login or password")
+	ErrNoConnection = errors.New("no connection")
 )
