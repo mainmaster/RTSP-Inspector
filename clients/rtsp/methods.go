@@ -2,6 +2,7 @@ package rtsp
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
@@ -156,4 +157,54 @@ func (c *Client) SetSessionID(sessionID string) {
 
 func (c *Client) GetSessionID() string {
 	return c.sessionID
+}
+
+func (c *Client) ProcessStream(dc types.DataChannels) {
+	defer func() {
+		close(dc.VideoCh)
+		close(dc.RTCPCh)
+		close(dc.AudioCh)
+		close(dc.ErrCh)
+	}()
+
+	for {
+		peek, err := c.reader.Peek(1)
+		if err != nil {
+			return
+		}
+
+		if peek[0] != '$' {
+			continue
+		}
+
+		c.reader.Discard(1)
+
+		channelByte, _ := c.reader.ReadByte()
+		channel := int(channelByte)
+
+		lenBuf := make([]byte, 2)
+		if _, err := io.ReadFull(c.reader, lenBuf); err != nil {
+			return
+		}
+		length := binary.BigEndian.Uint16(lenBuf)
+
+		payload := make([]byte, length)
+		if _, err := io.ReadFull(c.reader, payload); err != nil {
+			return
+		}
+
+		switch channel {
+		case 0:
+			dc.VideoCh <- payload
+		case 1:
+			dc.RTCPCh <- payload
+		case 2:
+			dc.AudioCh <- payload
+		case 3:
+			dc.RTCPCh <- payload
+		default:
+			continue
+
+		}
+	}
 }
