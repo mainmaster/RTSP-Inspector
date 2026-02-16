@@ -18,16 +18,17 @@ func (c *Client) Do(req *Request) (*types.Response, error) {
 		return nil, common_errors.ErrNoConnection
 	}
 
-	preparedReq := c.GetPreparedPayload(*req)
-	return c.Send(preparedReq.Build())
+	return c.Send(c.BuildRequest(*req))
 }
 
 func (c *Client) Send(payload string) (*types.Response, error) {
+	defer func() {
+		c.csec++
+	}()
+
 	if _, err := c.conn.Write([]byte(payload)); err != nil {
 		return nil, err
 	}
-
-	c.csec++
 
 	h, err := c.readHeaders()
 	if err != nil {
@@ -43,15 +44,6 @@ func (c *Client) Send(payload string) (*types.Response, error) {
 		Headers: h,
 		Body:    body,
 	}, nil
-}
-
-func (c *Client) GetPreparedPayload(req Request) Request {
-	req.SetCSeq(c.csec)
-
-	if c.digestAuth.Nonce != "" {
-		req.Header.Add("Authorization", c.digestAuth.GetHeader(req.Method, req.URL))
-	}
-	return req
 }
 
 func (c *Client) setCredentialsFromURL(u url.URL) {
@@ -126,7 +118,7 @@ func (c *Client) Connect(u url.URL) error {
 func (c *Client) setDigestHeaders(u url.URL) error {
 	u.User = nil
 
-	req, err := NewRequest("OPTIONS", u.String())
+	req, err := c.NewRequest("OPTIONS", u.String())
 	if err != nil {
 		return err
 	}
@@ -156,4 +148,12 @@ func (c *Client) IsEmptyConnection() bool {
 		return true
 	}
 	return false
+}
+
+func (c *Client) SetSessionID(sessionID string) {
+	c.sessionID = sessionID
+}
+
+func (c *Client) GetSessionID() string {
+	return c.sessionID
 }

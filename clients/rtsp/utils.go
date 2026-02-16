@@ -5,9 +5,10 @@ import (
 )
 
 const (
-	realmRegEx = `realm="([^"]+)"`
-	nonceRegEx = `nonce="([^"]+)"`
-	authHeader = "WWW-Authenticate"
+	realmRegEx     = `realm="([^"]+)"`
+	nonceRegEx     = `nonce="([^"]+)"`
+	sessionIDRegEx = `Session: ([^; \r\n]+)`
+	authHeader     = "WWW-Authenticate"
 )
 
 func findParam(header, pattern string) string {

@@ -12,6 +12,7 @@ type Client struct {
 	reader      *bufio.Reader
 	tp          *textproto.Reader
 	csec        int
+	sessionID   string
 	digestAuth  auth.DigestAuth
 	Credentials Credentials
 }

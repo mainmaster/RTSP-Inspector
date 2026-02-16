@@ -23,7 +23,7 @@ func main() {
 			Password: "qwerty123",
 		})
 	*/
-	req, err := rtsp.NewRequest("OPTIONS", baseRTSP)
+	req, err := c.NewRequest("OPTIONS", baseRTSP)
 	//req.Header["kek"] = "zzz"
 	if err != nil {
 		panic(err)
@@ -35,7 +35,7 @@ func main() {
 	}
 	fmt.Println(res)
 
-	req, err = rtsp.NewRequest("DESCRIBE", baseRTSP)
+	req, err = c.NewRequest("DESCRIBE", baseRTSP)
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +47,7 @@ func main() {
 	sdpSess, err := sdp.ParseString(string(res.Body))
 	fmt.Println(sdpSess)
 
-	req, err = rtsp.NewRequest("SETUP", baseRTSP+"/trackID=0")
+	req, err = c.NewRequest("SETUP", baseRTSP+"/trackID=0")
 	if err != nil {
 		panic(err)
 	}
@@ -59,6 +59,13 @@ func main() {
 	}
 	fmt.Println(res)
 
+	c.SetSessionID(res.Header.Get("Session"))
+
+	req, err = c.NewRequest("PLAY", baseRTSP)
+	req.Header.Add("Session", c.GetSessionID())
+	if err != nil {
+		panic(err)
+	}
 }
 
 // sdpSess, err := sdp.ParseString(string(res.Body))

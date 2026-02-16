@@ -25,7 +25,7 @@ type Request struct {
 	TrackID int
 }
 
-func NewRequest(method, rtspURL string) (*Request, error) {
+func (c *Client) NewRequest(method, rtspURL string) (*Request, error) {
 	return &Request{
 		Method: method,
 		URL:    rtspURL,
@@ -39,11 +39,13 @@ func getDefaultHeaders() Header {
 	return header
 }
 
-func (r *Request) SetCSeq(cseq int) {
-	r.Header.Add("CSeq", strconv.Itoa(cseq))
-}
+func (c *Client) BuildRequest(r Request) string {
+	r.Header.Add("CSeq", strconv.Itoa(c.csec))
 
-func (r *Request) Build() string {
+	if c.digestAuth.Nonce != "" {
+		r.Header.Add("Authorization", c.digestAuth.GetHeader(r.Method, r.URL))
+	}
+
 	var b strings.Builder
 
 	url := r.URL
@@ -72,6 +74,7 @@ func (r *Request) Build() string {
 			b.WriteString("\r\n")
 		}
 	}
+
 	b.WriteString("\r\n")
 
 	return b.String()
