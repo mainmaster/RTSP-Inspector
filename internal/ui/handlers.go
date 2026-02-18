@@ -5,8 +5,11 @@ import (
 	"net/textproto"
 	"net/url"
 	"rtsp-inspector/clients/rtsp"
+	"rtsp-inspector/types"
 	"strings"
+	"time"
 
+	"fyne.io/fyne/v2"
 	"github.com/pixelbender/go-sdp/sdp"
 )
 
@@ -80,6 +83,50 @@ func (h *Handlers) HandleConnect() {
 		h.UI.RequestBody.SetText(h.client.BuildRequest(*req))
 	}
 
+	channels := types.DataChannels{
+		VideoCh: make(chan []byte, 100),
+		AudioCh: make(chan []byte, 100),
+		RTCPCh:  make(chan []byte, 10),
+		ErrCh:   make(chan error, 1),
+	}
+
+	go func() {
+		go h.client.ProcessStream(channels)
+
+		counter := types.PacketCounter{}
+
+		uiTicker := time.NewTicker(200 * time.Millisecond)
+		defer uiTicker.Stop()
+
+		for {
+			select {
+			case <-channels.VideoCh:
+				counter.Video++
+			case <-channels.AudioCh:
+				counter.Audio++
+			case rtcp := <-channels.RTCPCh:
+				counter.RTCP++
+				h.UI.AppendLog(string(rtcp))
+
+			case <-time.After(time.Second * 5):
+				fmt.Println("Тишина в эфире более 5 секунд...")
+				return
+			case <-channels.ErrCh:
+				return
+			case <-uiTicker.C:
+				fyne.Do(func() {
+					h.UpdateCounter(counter)
+				})
+			}
+		}
+	}()
+}
+
+func (h *Handlers) UpdateCounter(counter types.PacketCounter) {
+	h.UI.InfoLabels["Video"].SetText(fmt.Sprintf("%d", counter.Video))
+	h.UI.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", counter.Audio))
+	h.UI.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", counter.Audio))
+	h.UI.InfoLabels["RTCP"].SetText(fmt.Sprintf("%d", counter.RTCP))
 }
 
 func buildOutputString(headers textproto.MIMEHeader, body []byte) string {

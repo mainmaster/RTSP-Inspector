@@ -1,13 +1,17 @@
 package ui
 
 import (
+	"strings"
+
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
 
 type Widgets struct {
 	URLEntry    *widget.Entry
 	LogOutput   *widget.Entry
+	LogScroll   *container.Scroll
 	RequestBody *widget.Entry
 	BtnOpen     *widget.Button
 	BtnOptions  *widget.Button
@@ -48,6 +52,7 @@ func NewUIWidgets() *Widgets {
 	return &Widgets{
 		URLEntry:    url,
 		LogOutput:   log,
+		LogScroll:   container.NewScroll(log),
 		RequestBody: requestBody,
 		BtnOptions:  widget.NewButton("OPTIONS", nil),
 		BtnOpen:     widget.NewButton("OPEN", nil),
@@ -62,7 +67,11 @@ func NewUIWidgets() *Widgets {
 }
 
 func (ui *Widgets) AppendLog(msg string) {
-	ui.LogOutput.SetText(ui.LogOutput.Text + "\n" + "--------------------------" + "\n" + msg)
-	ui.LogOutput.Refresh()
-	// Можно добавить логику автоскролла здесь, если обернуть в ScrollContainer
+	fyne.Do(func() {
+		ui.LogOutput.SetText(ui.LogOutput.Text + "\n" + "--------------------------" + "\n" + msg)
+		ui.LogOutput.Refresh()
+		ui.LogOutput.CursorRow = len(strings.Split(ui.LogOutput.Text, "\n"))
+		ui.LogScroll.ScrollToBottom()
+		ui.LogScroll.Refresh()
+	})
 }

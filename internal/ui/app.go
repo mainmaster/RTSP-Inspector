@@ -48,7 +48,7 @@ func makeTopPanel(ui *Widgets) fyne.CanvasObject {
 
 func makeCenterContent(ui *Widgets) fyne.CanvasObject {
 	// 1. Верхняя часть (логи)
-	top := container.NewScroll(ui.LogOutput)
+	top := ui.LogScroll
 
 	// 2. Нижняя часть:
 	// Убираем внутренний скролл вокруг формы.
