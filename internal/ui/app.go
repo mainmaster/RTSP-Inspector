@@ -49,12 +49,34 @@ func makeTopPanel(ui *Widgets) fyne.CanvasObject {
 func makeCenterContent(ui *Widgets) fyne.CanvasObject {
 	// 1. Верхняя часть (логи)
 	top := container.NewScroll(ui.LogOutput)
-	return top
+
+	// 2. Нижняя часть:
+	// Убираем внутренний скролл вокруг формы.
+	// Просто кладем форму в HBox, чтобы она могла расти вширь.
+	gridHoriz := container.NewHBox(
+		ui.StatsForm,
+		//layout.NewSpacer(), // Это прижмет форму влево, но даст ей расти
+	)
+
+	// Прижимаем К ВЕРХУ
+	gridFixed := container.NewVBox(gridHoriz, layout.NewSpacer())
+
+	// 3. САМЫЙ ВАЖНЫЙ МОМЕНТ:
+	// Используем ОБЫЧНЫЙ NewScroll (не VScroll).
+	// Он позволяет скроллить и по вертикали, и по горизонтали.
+	// Оборачиваем его в NewStack, чтобы он занял ВСЮ выделенную VSplit область.
+	bottom := container.NewStack(container.NewScroll(gridFixed))
+
+	// 4. Разделитель
+	split := container.NewVSplit(top, bottom)
+	split.Offset = 0.5
+	return split
 }
 
 func makeBottomPanel(ui *Widgets) fyne.CanvasObject {
 	return container.NewHBox(
 		layout.NewSpacer(),
+
 		ui.BtnDescribe,
 		layout.NewSpacer(),
 	)
