@@ -19,6 +19,10 @@ func (c *Client) Do(req *Request) (*types.Response, error) {
 		return nil, common_errors.ErrNoConnection
 	}
 
+	parcedURL, _ := url.Parse(req.URL)
+	parcedURL.User = nil
+	req.URL = parcedURL.String()
+	
 	return c.Send(c.BuildRequest(*req))
 }
 

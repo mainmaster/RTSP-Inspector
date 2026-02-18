@@ -68,6 +68,7 @@ func main() {
 		panic(err)
 	}
 	req.Header.Add("Session", c.GetSessionID())
+
 	res, err = c.Do(req)
 	if err != nil {
 		panic(err)

@@ -49,9 +49,6 @@ func (c *Client) BuildRequest(r Request) string {
 	var b strings.Builder
 
 	url := r.URL
-	if r.Method == types.MethodSetup {
-		url = fmt.Sprintf("%s/trackID=%d", url, r.TrackID)
-	}
 
 	b.WriteString(fmt.Sprintf("%s %s RTSP/1.0", r.Method, url))
 	b.WriteString("\r\n")

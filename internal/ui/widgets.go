@@ -6,16 +6,18 @@ import (
 )
 
 type Widgets struct {
-	URLEntry    *widget.Entry
-	LogOutput   *widget.Entry
-	RequestBody *widget.Entry
-	BtnConnect  *widget.Button
-	BtnOptions  *widget.Button
-	BtnDescribe *widget.Button
-	BtnSetup    *widget.Button
-	BtnPlay     *widget.Button
-	BtnClear    *widget.Button
-	BtnSend     *widget.Button
+	URLEntry     *widget.Entry
+	LogOutput    *widget.Entry
+	RequestBody  *widget.Entry
+	BtnOpen      *widget.Button
+	BtnOptions   *widget.Button
+	BtnDescribe  *widget.Button
+	BtnSetup     *widget.Button
+	BtnPlay      *widget.Button
+	BtnClear     *widget.Button
+	BtnSend      *widget.Button
+	DescribeForm *widget.Form
+	SPROPFrom    *widget.Form
 }
 
 func NewUIWidgets() *Widgets {
@@ -35,20 +37,22 @@ func NewUIWidgets() *Widgets {
 	log.Wrapping = fyne.TextWrapOff
 
 	return &Widgets{
-		URLEntry:    url,
-		LogOutput:   log,
-		RequestBody: requestBody,
-		BtnOptions:  widget.NewButton("OPTIONS", nil),
-		BtnConnect:  widget.NewButton("CONNECT", nil),
-		BtnDescribe: widget.NewButton("DESCRIBE", nil),
-		BtnSetup:    widget.NewButton("SETUP", nil),
-		BtnPlay:     widget.NewButton("PLAY", nil),
-		BtnClear:    widget.NewButton("Clear Log", nil),
-		BtnSend:     widget.NewButton("Send", nil),
+		URLEntry:     url,
+		LogOutput:    log,
+		RequestBody:  requestBody,
+		BtnOptions:   widget.NewButton("OPTIONS", nil),
+		BtnOpen:      widget.NewButton("OPEN", nil),
+		BtnDescribe:  widget.NewButton("DESCRIBE", nil),
+		BtnSetup:     widget.NewButton("SETUP", nil),
+		BtnPlay:      widget.NewButton("PLAY", nil),
+		BtnClear:     widget.NewButton("Clear Log", nil),
+		BtnSend:      widget.NewButton("Send", nil),
+		DescribeForm: widget.NewForm(),
 	}
 }
 
 func (ui *Widgets) AppendLog(msg string) {
-	ui.LogOutput.SetText(ui.LogOutput.Text + "\n" + msg)
+	ui.LogOutput.SetText(ui.LogOutput.Text + "\n" + "--------------------------" + "\n" + msg)
+	ui.LogOutput.Refresh()
 	// Можно добавить логику автоскролла здесь, если обернуть в ScrollContainer
 }
