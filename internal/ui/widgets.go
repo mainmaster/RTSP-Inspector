@@ -17,6 +17,7 @@ type Widgets struct {
 	BtnClear    *widget.Button
 	BtnSend     *widget.Button
 	StatsForm   *widget.Form
+	InfoLabels  map[string]*widget.Label
 }
 
 func NewUIWidgets() *Widgets {
@@ -35,6 +36,15 @@ func NewUIWidgets() *Widgets {
 	log.MultiLine = true
 	log.Wrapping = fyne.TextWrapOff
 
+	statsForm := widget.NewForm()
+	infoLabels := make(map[string]*widget.Label)
+	keys := []string{"Packets", "Video", "Audio", "RTCP"}
+	for _, k := range keys {
+		lbl := widget.NewLabel("-") // Ставим прочерк по умолчанию
+		infoLabels[k] = lbl
+		statsForm.Append(k, lbl)
+	}
+
 	return &Widgets{
 		URLEntry:    url,
 		LogOutput:   log,
@@ -46,7 +56,8 @@ func NewUIWidgets() *Widgets {
 		BtnPlay:     widget.NewButton("PLAY", nil),
 		BtnClear:    widget.NewButton("Clear Log", nil),
 		BtnSend:     widget.NewButton("Send", nil),
-		StatsForm:   widget.NewForm(),
+		StatsForm:   statsForm,
+		InfoLabels:  infoLabels,
 	}
 }
 
