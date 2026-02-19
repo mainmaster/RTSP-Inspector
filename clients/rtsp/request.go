@@ -2,6 +2,7 @@ package rtsp
 
 import (
 	"fmt"
+	"net/url"
 	"rtsp-inspector/types"
 	"strconv"
 	"strings"
@@ -20,16 +21,24 @@ func (h Header) Add(key, value string) {
 
 type Request struct {
 	Method  string
-	URL     string
+	URL     url.URL
 	Header  Header
 	TrackID int
+	client  *Client
 }
 
 func (c *Client) NewRequest(method, rtspURL string) (*Request, error) {
+	parsedURL, err := url.Parse(rtspURL)
+	if err != nil {
+		return nil, err
+	}
+	parsedURL.User = nil
+
 	return &Request{
 		Method: method,
-		URL:    rtspURL,
+		URL:    *parsedURL,
 		Header: getDefaultHeaders(),
+		client: c,
 	}, nil
 }
 
@@ -39,18 +48,21 @@ func getDefaultHeaders() Header {
 	return header
 }
 
-func (c *Client) BuildRequest(r Request) string {
-	r.Header.Add("CSeq", strconv.Itoa(c.csec))
+func (r *Request) SetSessionID(sessionID string) {
+	s := strings.Split(sessionID, ";")[0]
+	r.Header.Add("Session", s)
+}
 
-	if c.digestAuth.Nonce != "" {
-		r.Header.Add("Authorization", c.digestAuth.GetHeader(r.Method, r.URL))
+func (r *Request) BuildRequest() string {
+	r.Header.Add("CSeq", strconv.Itoa(r.client.csec))
+
+	if r.client.digestAuth.Nonce != "" {
+		r.Header.Add("Authorization", r.client.digestAuth.GetHeader(r.Method, r.URL.String()))
 	}
 
 	var b strings.Builder
 
-	url := r.URL
-
-	b.WriteString(fmt.Sprintf("%s %s RTSP/1.0", r.Method, url))
+	b.WriteString(fmt.Sprintf("%s %s RTSP/1.0", r.Method, r.URL.String()))
 	b.WriteString("\r\n")
 
 	for key, value := range r.Header {
@@ -74,5 +86,6 @@ func (c *Client) BuildRequest(r Request) string {
 
 	b.WriteString("\r\n")
 
+	fmt.Println()
 	return b.String()
 }

@@ -6,8 +6,6 @@ import (
 	"rtsp-inspector/clients/rtsp"
 	"rtsp-inspector/types"
 	"time"
-
-	"github.com/pixelbender/go-sdp/sdp"
 )
 
 func main() {
@@ -46,28 +44,26 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	sdpSess, err := sdp.ParseString(string(res.Body))
-	fmt.Println(sdpSess)
 
-	req, err = c.NewRequest("SETUP", baseRTSP+"/trackID=0")
-	if err != nil {
-		panic(err)
+	for _, t := range res.GetTrackIDs() {
+		req, err = c.NewRequest("SETUP", baseRTSP+"/trackID="+t)
+		if err != nil {
+			panic(err)
+		}
+
+		req.Header.Add("Transport", "RTP/AVP/TCP;interleaved=0-1")
+		res, err = c.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(res)
 	}
-
-	req.Header.Add("Transport", "RTP/AVP/TCP;interleaved=0-1")
-	res, err = c.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(res)
-
-	c.SetSessionID(res.Header.Get("Session"))
 
 	req, err = c.NewRequest("PLAY", baseRTSP)
+	res.GetSessionID()
 	if err != nil {
 		panic(err)
 	}
-	req.Header.Add("Session", c.GetSessionID())
 
 	res, err = c.Do(req)
 	if err != nil {

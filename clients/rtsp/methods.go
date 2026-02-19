@@ -14,19 +14,14 @@ import (
 	"strconv"
 )
 
-func (c *Client) Do(req *Request) (*types.Response, error) {
+func (c *Client) Do(req *Request) (*Response, error) {
 	if c.conn == nil {
 		return nil, common_errors.ErrNoConnection
 	}
-
-	parcedURL, _ := url.Parse(req.URL)
-	parcedURL.User = nil
-	req.URL = parcedURL.String()
-
-	return c.Send(c.BuildRequest(*req))
+	return c.Send(req.BuildRequest())
 }
 
-func (c *Client) Send(payload string) (*types.Response, error) {
+func (c *Client) Send(payload string) (*Response, error) {
 	defer func() {
 		c.csec++
 	}()
@@ -45,7 +40,7 @@ func (c *Client) Send(payload string) (*types.Response, error) {
 		return nil, err
 	}
 
-	return &types.Response{
+	return &Response{
 		Headers: h,
 		Body:    body,
 	}, nil
@@ -59,10 +54,10 @@ func (c *Client) setCredentialsFromURL(u url.URL) {
 	c.digestAuth.Password = pass
 }
 
-func (c *Client) readHeaders() (types.Headers, error) {
+func (c *Client) readHeaders() (Headers, error) {
 	line, err := c.tp.ReadLine()
 	if err != nil {
-		return types.Headers{}, err
+		return Headers{}, err
 	}
 
 	var code int
@@ -70,10 +65,10 @@ func (c *Client) readHeaders() (types.Headers, error) {
 
 	headers, err := c.tp.ReadMIMEHeader()
 	if err != nil {
-		return types.Headers{}, err
+		return Headers{}, err
 	}
 
-	return types.Headers{
+	return Headers{
 		Header:     headers,
 		StatusLine: line,
 		StatusCode: code,
@@ -153,14 +148,6 @@ func (c *Client) IsEmptyConnection() bool {
 		return true
 	}
 	return false
-}
-
-func (c *Client) SetSessionID(sessionID string) {
-	c.sessionID = sessionID
-}
-
-func (c *Client) GetSessionID() string {
-	return c.sessionID
 }
 
 func (c *Client) ProcessStream(dc types.DataChannels) {
