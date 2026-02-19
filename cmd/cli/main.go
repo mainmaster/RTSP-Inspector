@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"rtsp-inspector/clients/rtsp"
@@ -17,14 +18,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	/*
-		c.SetCredentials(rtsp.Credentials{
-			Username: "admin",
-			Password: "qwerty123",
-		})
-	*/
+
 	req, err := c.NewRequest("OPTIONS", baseRTSP)
-	//req.Header["kek"] = "zzz"
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +41,9 @@ func main() {
 	}
 
 	for _, t := range res.GetTrackIDs() {
-		req, err = c.NewRequest("SETUP", baseRTSP+"/trackID="+t)
+		req, err = c.NewRequest("SETUP", baseRTSP)
+		req.SetTrackID(t)
+
 		if err != nil {
 			panic(err)
 		}
@@ -71,30 +68,36 @@ func main() {
 	}
 
 	channels := types.DataChannels{
-		VideoCh: make(chan []byte, 100),
-		AudioCh: make(chan []byte, 100),
-		RTCPCh:  make(chan []byte, 10),
-		ErrCh:   make(chan error, 1),
+		VideoCh:     make(chan []byte, 100),
+		AudioCh:     make(chan []byte, 100),
+		RTCPAudioCh: make(chan []byte, 10),
+		RTCPVideoCh: make(chan []byte, 10),
+		ErrCh:       make(chan error, 1),
 	}
 
-	go c.ProcessStream(channels)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go c.ProcessStream(ctx, channels)
 
 	for {
 		select {
 		case audioPack := <-channels.AudioCh:
 			fmt.Printf("Audio: %d байт\n", len(audioPack))
+		case rtcp := <-channels.RTCPAudioCh:
+			fmt.Printf("Служебный RTCP: %d байт\n", len(rtcp))
 		case videoPack := <-channels.VideoCh:
 			fmt.Printf("Видео: %d байт\n", len(videoPack))
-		case rtcp := <-channels.RTCPCh:
+		case rtcp := <-channels.RTCPVideoCh:
 			fmt.Printf("Служебный RTCP: %d байт\n", len(rtcp))
 		case err := <-channels.ErrCh:
 			fmt.Printf("Ошибка: %v\n", err)
 			return // Выходим при ошибке
 		case <-time.After(time.Second * 5):
 			fmt.Println("Тишина в эфире более 5 секунд...")
+			ctx.Done()
+			break
 		}
 	}
 
 }
-
-// sdpSess, err := sdp.ParseString(string(res.Body))

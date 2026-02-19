@@ -3,9 +3,16 @@ package rtsp
 import (
 	"fmt"
 	"net/url"
-	"rtsp-inspector/types"
 	"strconv"
 	"strings"
+)
+
+const (
+	MethodOptions  = "OPTIONS"
+	MethodDescribe = "DESCRIBE"
+	MethodSetup    = "SETUP"
+	MethodPlay     = "PLAY"
+	MethodTeardown = "TEARDOWN"
 )
 
 type Credentials struct {
@@ -23,7 +30,7 @@ type Request struct {
 	Method  string
 	URL     url.URL
 	Header  Header
-	TrackID int
+	trackID int
 	client  *Client
 }
 
@@ -53,6 +60,11 @@ func (r *Request) SetSessionID(sessionID string) {
 	r.Header.Add("Session", s)
 }
 
+func (r *Request) SetTrackID(trackID string) {
+	r.trackID, _ = strconv.Atoi(trackID)
+	r.URL = *r.URL.JoinPath(fmt.Sprintf("/trackID=%s", trackID))
+}
+
 func (r *Request) BuildRequest() string {
 	r.Header.Add("CSeq", strconv.Itoa(r.client.csec))
 
@@ -70,14 +82,14 @@ func (r *Request) BuildRequest() string {
 		b.WriteString("\r\n")
 	}
 
-	if r.Method == types.MethodSetup {
+	if r.Method == MethodSetup {
 		if _, ok := r.Header["Transport"]; !ok {
-			b.WriteString("Transport: RTP/AVP/TCP;interleaved=0-1")
+			b.WriteString(fmt.Sprintf("Transport: RTP/AVP/TCP;interleaved=%d-%d", r.trackID*2, r.trackID*2+1))
 			b.WriteString("\r\n")
 		}
 	}
 
-	if r.Method == types.MethodDescribe {
+	if r.Method == MethodDescribe {
 		if _, ok := r.Header["Accept"]; !ok {
 			b.WriteString("Accept: application/sdp")
 			b.WriteString("\r\n")
