@@ -12,6 +12,7 @@ const (
 	MethodDescribe = "DESCRIBE"
 	MethodSetup    = "SETUP"
 	MethodPlay     = "PLAY"
+	MethodPause    = "PAUSE"
 	MethodTeardown = "TEARDOWN"
 )
 
@@ -95,7 +96,6 @@ func (r *Request) BuildRequest() string {
 			b.WriteString("\r\n")
 		}
 	}
-
 	b.WriteString("\r\n")
 
 	fmt.Println()

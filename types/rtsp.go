@@ -5,5 +5,4 @@ type DataChannels struct {
 	AudioCh     chan []byte
 	RTCPVideoCh chan []byte
 	RTCPAudioCh chan []byte
-	ErrCh       chan error
 }

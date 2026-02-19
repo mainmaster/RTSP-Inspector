@@ -167,7 +167,6 @@ func (c *Client) ProcessStream(ctx context.Context, dc types.DataChannels) {
 		close(dc.RTCPVideoCh)
 		close(dc.AudioCh)
 		close(dc.RTCPAudioCh)
-		close(dc.ErrCh)
 	}()
 
 	for {

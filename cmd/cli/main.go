@@ -48,7 +48,6 @@ func main() {
 			panic(err)
 		}
 
-		req.Header.Add("Transport", "RTP/AVP/TCP;interleaved=0-1")
 		res, err = c.Do(req)
 		if err != nil {
 			panic(err)
@@ -57,7 +56,6 @@ func main() {
 	}
 
 	req, err = c.NewRequest("PLAY", baseRTSP)
-	res.GetSessionID()
 	if err != nil {
 		panic(err)
 	}

@@ -42,7 +42,7 @@ func NewUIWidgets() *Widgets {
 
 	statsForm := widget.NewForm()
 	infoLabels := make(map[string]*widget.Label)
-	keys := []string{"Packets", "Video", "Audio", "RTCP"}
+	keys := []string{"Packets", "Video", "Audio", "RTCPVideo", "RTCPAudio"}
 	for _, k := range keys {
 		lbl := widget.NewLabel("-") // Ставим прочерк по умолчанию
 		infoLabels[k] = lbl
@@ -69,9 +69,9 @@ func NewUIWidgets() *Widgets {
 func (ui *Widgets) AppendLog(msg string) {
 	fyne.Do(func() {
 		ui.LogOutput.SetText(ui.LogOutput.Text + "\n" + "--------------------------" + "\n" + msg)
-		ui.LogOutput.Refresh()
 		ui.LogOutput.CursorRow = len(strings.Split(ui.LogOutput.Text, "\n"))
 		ui.LogScroll.ScrollToBottom()
+		ui.LogOutput.Refresh()
 		ui.LogScroll.Refresh()
 	})
 }
