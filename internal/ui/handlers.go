@@ -48,7 +48,7 @@ func (h *Handlers) HandleConnect() {
 		h.UI.AppendLog("Error: " + err.Error())
 	}
 	h.UI.AppendLog("Connected: " + u.Host)
-	h.UI.BtnOpen.Text = "DISCONNECT"
+	h.UI.BtnOpen.SetText("DISCONNECT")
 
 	req, _ := h.client.NewRequest("OPTIONS", h.UI.URLEntry.Text)
 	h.UI.AppendLog(req.BuildRequest())
@@ -61,26 +61,21 @@ func (h *Handlers) HandleConnect() {
 	res, _ = h.client.Do(req)
 	h.UI.AppendLog(buildOutputString(res.Header, res.Body))
 
+	sessionIDs := make(map[string]struct{})
 	for _, t := range res.GetTrackIDs() {
 		req, _ = h.client.NewRequest("SETUP", h.UI.URLEntry.Text)
 		req.SetTrackID(t)
 		res, err = h.client.Do(req)
 		h.UI.AppendLog(buildOutputString(res.Header, res.Body))
+		sessionIDs[res.GetSessionID()] = struct{}{}
 	}
 
-	for _, sessionID := range res.GetSessionID() {
+	for sessionID, _ := range sessionIDs {
 		req, _ = h.client.NewRequest("PLAY", h.UI.URLEntry.Text)
-		req.SetSessionID(string(sessionID))
+		req.SetSessionID(sessionID)
 		h.UI.AppendLog(req.BuildRequest())
 
-		/*
-			TODO
-			необходимо сделать метод отправки без чтения, так как летят видео данные вместо ответа
-			PLAY или обработать как-то PLAY ответ
-
-		*/
-
-		h.client.Do(req)
+		res, err = h.client.Do(req)
 		if err != nil {
 			h.UI.AppendLog("Error: " + err.Error())
 			h.client.Close()
@@ -99,9 +94,12 @@ func (h *Handlers) HandleConnect() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go func() {
-		go h.client.ProcessStream(ctx, channels)
+	// wait PLAY rtsp response
+	time.Sleep(1 * time.Second)
 
+	go h.client.ProcessStream(ctx, channels)
+
+	go func() {
 		counter := types.PacketCounter{}
 
 		uiTicker := time.NewTicker(200 * time.Millisecond)
@@ -113,12 +111,12 @@ func (h *Handlers) HandleConnect() {
 				counter.Video++
 			case <-channels.AudioCh:
 				counter.Audio++
-			case rtcpVideo := <-channels.RTCPVideoCh:
+			case <-channels.RTCPVideoCh:
 				counter.RTCPVideo++
-				h.UI.AppendLog(string(rtcpVideo))
-			case rtcpAudio := <-channels.RTCPAudioCh:
+				//h.UI.AppendLog(string(rtcpVideo))
+			case <-channels.RTCPAudioCh:
 				counter.RTCPAudio++
-				h.UI.AppendLog(string(rtcpAudio))
+				//h.UI.AppendLog(string(rtcpAudio))
 			case <-time.After(time.Second * 5):
 				fmt.Println("Тишина в эфире более 5 секунд...")
 				return
@@ -129,11 +127,15 @@ func (h *Handlers) HandleConnect() {
 			}
 		}
 	}()
+
+	/*
+		Контекст умирает сразу!!!
+	*/
+
 }
 
 func (h *Handlers) UpdateCounter(counter types.PacketCounter) {
 	h.UI.InfoLabels["Video"].SetText(fmt.Sprintf("%d", counter.Video))
-	h.UI.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", counter.Audio))
 	h.UI.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", counter.Audio))
 	h.UI.InfoLabels["RTCPVideo"].SetText(fmt.Sprintf("%d", counter.RTCPVideo))
 	h.UI.InfoLabels["RTCPAudio"].SetText(fmt.Sprintf("%d", counter.RTCPAudio))

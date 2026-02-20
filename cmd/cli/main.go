@@ -70,7 +70,6 @@ func main() {
 		AudioCh:     make(chan []byte, 100),
 		RTCPAudioCh: make(chan []byte, 10),
 		RTCPVideoCh: make(chan []byte, 10),
-		ErrCh:       make(chan error, 1),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -88,9 +87,6 @@ func main() {
 			fmt.Printf("Видео: %d байт\n", len(videoPack))
 		case rtcp := <-channels.RTCPVideoCh:
 			fmt.Printf("Служебный RTCP: %d байт\n", len(rtcp))
-		case err := <-channels.ErrCh:
-			fmt.Printf("Ошибка: %v\n", err)
-			return // Выходим при ошибке
 		case <-time.After(time.Second * 5):
 			fmt.Println("Тишина в эфире более 5 секунд...")
 			ctx.Done()
