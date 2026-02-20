@@ -16,11 +16,15 @@ import (
 type Handlers struct {
 	UI     *Widgets
 	client *rtsp.Client
+	cancel context.CancelFunc
 }
 
 func (h *Handlers) HandleConnect() {
 	if h.UI.BtnOpen.Text == "DISCONNECT" {
 		err := h.client.Close()
+		if h.cancel != nil {
+			h.cancel()
+		}
 		if err != nil {
 			h.UI.AppendLog("Error: " + err.Error())
 		}
@@ -42,6 +46,9 @@ func (h *Handlers) HandleConnect() {
 		h.UI.AppendLog("Error: " + err.Error())
 		return
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	h.cancel = cancel
 
 	err = h.client.Connect(*u)
 	if err != nil {
@@ -91,9 +98,6 @@ func (h *Handlers) HandleConnect() {
 		RTCPAudioCh: make(chan []byte, 10),
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// wait PLAY rtsp response
 	time.Sleep(1 * time.Second)
 
@@ -113,25 +117,20 @@ func (h *Handlers) HandleConnect() {
 				counter.Audio++
 			case <-channels.RTCPVideoCh:
 				counter.RTCPVideo++
-				//h.UI.AppendLog(string(rtcpVideo))
 			case <-channels.RTCPAudioCh:
 				counter.RTCPAudio++
-				//h.UI.AppendLog(string(rtcpAudio))
 			case <-time.After(time.Second * 5):
-				fmt.Println("Тишина в эфире более 5 секунд...")
+				h.cancel()
 				return
 			case <-uiTicker.C:
 				fyne.Do(func() {
 					h.UpdateCounter(counter)
 				})
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
-
-	/*
-		Контекст умирает сразу!!!
-	*/
-
 }
 
 func (h *Handlers) UpdateCounter(counter types.PacketCounter) {
