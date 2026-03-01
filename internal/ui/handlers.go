@@ -58,11 +58,11 @@ func (h *Handlers) HandleConnect() {
 
 	req, _ = h.client.NewRequest("DESCRIBE", h.ui.URLEntry.Text)
 	h.ui.AppendLog(req.BuildRequest())
-	res, _ = h.client.Do(req)
+	describeRes, _ := h.client.Do(req)
 	h.ui.AppendLog(buildOutputString(res.Header, res.Body))
 
 	sessionIDs := make(map[string]struct{})
-	for _, t := range res.GetTrackIDs() {
+	for _, t := range describeRes.GetTrackIDs() {
 		req, _ = h.client.NewRequest("SETUP", h.ui.URLEntry.Text)
 		req.SetTrackID(t)
 		res, err = h.client.Do(req)
@@ -87,7 +87,8 @@ func (h *Handlers) HandleConnect() {
 	// wait PLAY rtsp_client response
 	time.Sleep(1 * time.Second)
 
-	p := processor.NewProcessor(h.client, processor.H264)
+	codecs, _ := describeRes.GetCodecs()
+	p := processor.NewProcessor(h.client, codecs["video"])
 	go p.StartReadStream(ctx)
 
 	go func() {

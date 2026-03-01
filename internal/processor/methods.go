@@ -5,18 +5,13 @@ import (
 	"encoding/binary"
 	"io"
 	"rtsp-inspector/internal/rtsp_client"
-)
 
-type CodecType int
-
-const (
-	H264 CodecType = iota
-	H265
+	"github.com/pixelbender/go-sdp/sdp"
 )
 
 type Processor struct {
 	client       *rtsp_client.Client
-	codecType    CodecType
+	codecType    *sdp.Format
 	DataChannels DataChannels
 }
 type DataChannels struct {
@@ -26,7 +21,7 @@ type DataChannels struct {
 	RTCPAudioCh chan []byte
 }
 
-func NewProcessor(client *rtsp_client.Client, codecType CodecType) *Processor {
+func NewProcessor(client *rtsp_client.Client, codecType *sdp.Format) *Processor {
 	return &Processor{
 		client:    client,
 		codecType: codecType,

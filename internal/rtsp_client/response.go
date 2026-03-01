@@ -38,3 +38,15 @@ func (res *Response) GetTrackIDs() []string {
 	}
 	return trackIDs
 }
+
+func (res *Response) GetCodecs() (map[string]*sdp.Format, error) {
+	codecMap := make(map[string]*sdp.Format)
+	sdpSess, err := sdp.ParseString(string(res.Body))
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range sdpSess.Media {
+		codecMap[m.Type] = m.Format[0]
+	}
+	return codecMap, nil
+}
