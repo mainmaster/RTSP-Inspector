@@ -4,6 +4,7 @@ go 1.25.6
 
 require (
 	fyne.io/fyne/v2 v2.7.2
+	github.com/pion/rtcp v1.2.16
 	github.com/pixelbender/go-sdp v1.2.0
 )
 

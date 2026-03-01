@@ -87,7 +87,7 @@ func (h *Handlers) HandleConnect() {
 	// wait PLAY rtsp_client response
 	time.Sleep(1 * time.Second)
 
-	p := processor.NewProcessor(h.client)
+	p := processor.NewProcessor(h.client, processor.H264)
 	go p.StartReadStream(ctx)
 
 	go func() {
@@ -104,6 +104,8 @@ func (h *Handlers) HandleConnect() {
 				counter.Audio++
 			case <-p.DataChannels.RTCPVideoCh:
 				counter.RTCPVideo++
+				//d, _ := rtcp.Unmarshal(rtcpData)
+				//fmt.Println(d)
 			case <-p.DataChannels.RTCPAudioCh:
 				counter.RTCPAudio++
 			case <-time.After(time.Second * 5):

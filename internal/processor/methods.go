@@ -7,8 +7,16 @@ import (
 	"rtsp-inspector/internal/rtsp_client"
 )
 
+type CodecType int
+
+const (
+	H264 CodecType = iota
+	H265
+)
+
 type Processor struct {
 	client       *rtsp_client.Client
+	codecType    CodecType
 	DataChannels DataChannels
 }
 type DataChannels struct {
@@ -18,9 +26,10 @@ type DataChannels struct {
 	RTCPAudioCh chan []byte
 }
 
-func NewProcessor(client *rtsp_client.Client) *Processor {
+func NewProcessor(client *rtsp_client.Client, codecType CodecType) *Processor {
 	return &Processor{
-		client: client,
+		client:    client,
+		codecType: codecType,
 		DataChannels: DataChannels{
 			VideoCh:     make(chan []byte, 100),
 			AudioCh:     make(chan []byte, 100),
@@ -81,7 +90,6 @@ func (p *Processor) StartReadStream(ctx context.Context) {
 			p.DataChannels.RTCPAudioCh <- payload
 		default:
 			continue
-
 		}
 	}
 }
