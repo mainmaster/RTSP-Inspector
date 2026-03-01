@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/textproto"
 	"net/url"
-	"rtsp-inspector/types"
+	"rtsp-inspector/internal/processor"
 	"strings"
 	"time"
 
@@ -84,17 +84,11 @@ func (h *Handlers) HandleConnect() {
 		h.ui.AppendLog(buildOutputString(res.Header, res.Body))
 	}
 
-	channels := types.DataChannels{
-		VideoCh:     make(chan []byte, 100),
-		AudioCh:     make(chan []byte, 100),
-		RTCPVideoCh: make(chan []byte, 10),
-		RTCPAudioCh: make(chan []byte, 10),
-	}
-
 	// wait PLAY rtsp_client response
 	time.Sleep(1 * time.Second)
 
-	go h.client.ProcessStream(ctx, channels)
+	p := processor.NewProcessor(h.client)
+	go p.StartReadStream(ctx)
 
 	go func() {
 		counter := PacketCounter{}
@@ -104,13 +98,13 @@ func (h *Handlers) HandleConnect() {
 
 		for {
 			select {
-			case <-channels.VideoCh:
+			case <-p.DataChannels.VideoCh:
 				counter.Video++
-			case <-channels.AudioCh:
+			case <-p.DataChannels.AudioCh:
 				counter.Audio++
-			case <-channels.RTCPVideoCh:
+			case <-p.DataChannels.RTCPVideoCh:
 				counter.RTCPVideo++
-			case <-channels.RTCPAudioCh:
+			case <-p.DataChannels.RTCPAudioCh:
 				counter.RTCPAudio++
 			case <-time.After(time.Second * 5):
 				h.cancel()

@@ -2,8 +2,6 @@ package rtsp_client
 
 import (
 	"bufio"
-	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -11,13 +9,12 @@ import (
 	"net/textproto"
 	"net/url"
 	"rtsp-inspector/internal/rtsp_client/auth"
-	"rtsp-inspector/types"
 	"strconv"
 )
 
 type Client struct {
 	conn        net.Conn
-	reader      *bufio.Reader
+	Reader      *bufio.Reader
 	tp          *textproto.Reader
 	csec        int
 	sessionID   string
@@ -98,7 +95,7 @@ func (c *Client) readBody(headers textproto.MIMEHeader) ([]byte, error) {
 	}
 
 	body := make([]byte, size)
-	_, err = io.ReadFull(c.reader, body)
+	_, err = io.ReadFull(c.Reader, body)
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +112,8 @@ func (c *Client) Connect(u url.URL) error {
 		return err
 	}
 	c.conn = conn
-	c.reader = bufio.NewReader(conn)
-	c.tp = textproto.NewReader(c.reader)
+	c.Reader = bufio.NewReader(conn)
+	c.tp = textproto.NewReader(c.Reader)
 
 	c.setCredentialsFromURL(u)
 
@@ -159,60 +156,4 @@ func (c *Client) IsEmptyConnection() bool {
 		return true
 	}
 	return false
-}
-
-func (c *Client) ProcessStream(ctx context.Context, dc types.DataChannels) {
-	defer func() {
-		close(dc.VideoCh)
-		close(dc.RTCPVideoCh)
-		close(dc.AudioCh)
-		close(dc.RTCPAudioCh)
-	}()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
-		peek, err := c.reader.Peek(1)
-		if err != nil {
-			return
-		}
-
-		if peek[0] != '$' {
-			continue
-		}
-
-		c.reader.Discard(1)
-
-		channelByte, _ := c.reader.ReadByte()
-		channel := int(channelByte)
-
-		lenBuf := make([]byte, 2)
-		if _, err := io.ReadFull(c.reader, lenBuf); err != nil {
-			return
-		}
-		length := binary.BigEndian.Uint16(lenBuf)
-
-		payload := make([]byte, length)
-		if _, err := io.ReadFull(c.reader, payload); err != nil {
-			return
-		}
-
-		switch channel {
-		case 0:
-			dc.VideoCh <- payload
-		case 1:
-			dc.RTCPVideoCh <- payload
-		case 2:
-			dc.AudioCh <- payload
-		case 3:
-			dc.RTCPAudioCh <- payload
-		default:
-			continue
-
-		}
-	}
 }
