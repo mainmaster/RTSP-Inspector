@@ -1,16 +1,16 @@
-package rtsp
+package rtsp_client
 
 import (
 	"bufio"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/textproto"
 	"net/url"
-	"rtsp-inspector/auth"
-	"rtsp-inspector/internal/common_errors"
+	"rtsp-inspector/internal/rtsp_client/auth"
 	"rtsp-inspector/types"
 	"strconv"
 )
@@ -27,7 +27,7 @@ type Client struct {
 
 func (c *Client) Do(req *Request) (*Response, error) {
 	if c.conn == nil {
-		return nil, common_errors.ErrNoConnection
+		return nil, errors.New("no connection")
 	}
 	return c.Send(req.BuildRequest())
 }

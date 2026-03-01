@@ -1,4 +1,4 @@
-package rtsp
+package rtsp_client
 
 import (
 	"fmt"

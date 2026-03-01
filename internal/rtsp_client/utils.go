@@ -1,14 +1,13 @@
-package rtsp
+package rtsp_client
 
 import (
 	"regexp"
 )
 
 const (
-	realmRegEx     = `realm="([^"]+)"`
-	nonceRegEx     = `nonce="([^"]+)"`
-	sessionIDRegEx = `Session: ([^; \r\n]+)`
-	authHeader     = "WWW-Authenticate"
+	realmRegEx = `realm="([^"]+)"`
+	nonceRegEx = `nonce="([^"]+)"`
+	authHeader = "WWW-Authenticate"
 )
 
 func findParam(header, pattern string) string {

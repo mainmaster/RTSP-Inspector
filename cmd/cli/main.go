@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"rtsp-inspector/clients/rtsp"
+	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/types"
 	"time"
 )
 
 func main() {
-	baseRTSP := "rtsp://admin:qwerty123@192.168.31.176:554/RVi/1/1"
+	baseRTSP := "rtsp_client://admin:qwerty123@192.168.31.176:554/RVi/1/1"
 
-	c := rtsp.Client{}
+	c := rtsp_client.Client{}
 	u, _ := url.Parse(baseRTSP)
 	err := c.Connect(*u)
 	if err != nil {
