@@ -3,10 +3,10 @@ package processor
 import (
 	"context"
 	"encoding/binary"
+	"github.com/pion/rtcp"
+	"github.com/pixelbender/go-sdp/sdp"
 	"io"
 	"rtsp-inspector/internal/rtsp_client"
-
-	"github.com/pixelbender/go-sdp/sdp"
 )
 
 type Processor struct {
@@ -17,8 +17,8 @@ type Processor struct {
 type DataChannels struct {
 	VideoCh     chan []byte
 	AudioCh     chan []byte
-	RTCPVideoCh chan []byte
-	RTCPAudioCh chan []byte
+	RTCPVideoCh chan []rtcp.Packet
+	RTCPAudioCh chan []rtcp.Packet
 }
 
 func NewProcessor(client *rtsp_client.Client, codecType *sdp.Format) *Processor {
@@ -28,8 +28,8 @@ func NewProcessor(client *rtsp_client.Client, codecType *sdp.Format) *Processor 
 		DataChannels: DataChannels{
 			VideoCh:     make(chan []byte, 100),
 			AudioCh:     make(chan []byte, 100),
-			RTCPVideoCh: make(chan []byte, 10),
-			RTCPAudioCh: make(chan []byte, 10),
+			RTCPVideoCh: make(chan []rtcp.Packet, 10),
+			RTCPAudioCh: make(chan []rtcp.Packet, 10),
 		},
 	}
 }
@@ -78,11 +78,19 @@ func (p *Processor) StartReadStream(ctx context.Context) {
 		case 0:
 			p.DataChannels.VideoCh <- payload
 		case 1:
-			p.DataChannels.RTCPVideoCh <- payload
+			data, rtcpErr := rtcp.Unmarshal(payload)
+			if rtcpErr != nil {
+				continue
+			}
+			p.DataChannels.RTCPVideoCh <- data
 		case 2:
 			p.DataChannels.AudioCh <- payload
 		case 3:
-			p.DataChannels.RTCPAudioCh <- payload
+			data, rtcpErr := rtcp.Unmarshal(payload)
+			if rtcpErr != nil {
+				continue
+			}
+			p.DataChannels.RTCPAudioCh <- data
 		default:
 			continue
 		}
