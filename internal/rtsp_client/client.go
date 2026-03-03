@@ -2,6 +2,8 @@ package rtsp_client
 
 import (
 	"bufio"
+	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -9,7 +11,10 @@ import (
 	"net/textproto"
 	"net/url"
 	"rtsp-inspector/internal/rtsp_client/auth"
+	"rtsp-inspector/internal/types"
 	"strconv"
+
+	"github.com/pion/rtp"
 )
 
 type Client struct {
@@ -38,12 +43,12 @@ func (c *Client) Send(payload string) (*Response, error) {
 		return nil, err
 	}
 
-	h, err := c.readHeaders()
+	h, err := c.readRTSPHeaders()
 	if err != nil {
 		return nil, err
 	}
 
-	body, err := c.readBody(h.Header)
+	body, err := c.readRTSPBody(h.Header)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +67,7 @@ func (c *Client) setCredentialsFromURL(u url.URL) {
 	c.digestAuth.Password = pass
 }
 
-func (c *Client) readHeaders() (Headers, error) {
+func (c *Client) readRTSPHeaders() (Headers, error) {
 	line, err := c.tp.ReadLine()
 	if err != nil {
 		return Headers{}, err
@@ -83,7 +88,7 @@ func (c *Client) readHeaders() (Headers, error) {
 	}, nil
 }
 
-func (c *Client) readBody(headers textproto.MIMEHeader) ([]byte, error) {
+func (c *Client) readRTSPBody(headers textproto.MIMEHeader) ([]byte, error) {
 	contentLengthStr := headers.Get("Content-Length")
 	if contentLengthStr == "" {
 		return nil, nil
@@ -101,6 +106,46 @@ func (c *Client) readBody(headers textproto.MIMEHeader) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+func (c *Client) RTPReader(ctx context.Context, ch chan types.RTPPacket) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			peek, err := c.Reader.Peek(1)
+			if err != nil {
+				return
+			}
+			if peek[0] != '$' {
+				return
+			}
+
+			c.Reader.Discard(1)
+
+			channelByte, _ := c.Reader.ReadByte()
+			channel := types.RTPType(channelByte)
+
+			lenBuf := make([]byte, 2)
+			if _, err := io.ReadFull(c.Reader, lenBuf); err != nil {
+				return
+			}
+			length := binary.BigEndian.Uint16(lenBuf)
+			payload := make([]byte, length)
+			if _, err := io.ReadFull(c.Reader, payload); err != nil {
+				return
+			}
+
+			rtpPkt := &rtp.Packet{}
+			rtpPkt.Unmarshal(payload)
+
+			ch <- types.RTPPacket{
+				Type:   channel,
+				Packet: rtpPkt,
+			}
+		}
+	}
 }
 
 func (c *Client) Connect(u url.URL) error {

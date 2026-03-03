@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/textproto"
 	"net/url"
-	"rtsp-inspector/internal/processor"
+	"rtsp-inspector/internal/types"
 	"strings"
 	"time"
 
@@ -87,28 +87,21 @@ func (h *Handlers) HandleConnect() {
 	// wait PLAY rtsp_client response
 	time.Sleep(1 * time.Second)
 
+	rtpCh := make(chan types.RTPPacket)
+	go h.client.RTPReader(ctx, rtpCh)
+
 	codecs, _ := describeRes.GetCodecs()
-	p := processor.NewProcessor(h.client, codecs["video"])
-	go p.StartReadStream(ctx)
+
+	counter := &PacketCounter{}
+
+	uiTicker := time.NewTicker(200 * time.Millisecond)
 
 	go func() {
-		counter := PacketCounter{}
-
-		uiTicker := time.NewTicker(200 * time.Millisecond)
 		defer uiTicker.Stop()
-
 		for {
 			select {
-			case <-p.DataChannels.VideoCh:
-				counter.Video++
-			case <-p.DataChannels.AudioCh:
-				counter.Audio++
-			case <-p.DataChannels.RTCPVideoCh:
-				counter.RTCPVideo++
-				//d, _ := rtcp.Unmarshal(rtcpData)
-				//fmt.Println(d)
-			case <-p.DataChannels.RTCPAudioCh:
-				counter.RTCPAudio++
+			case rtpPacket := <-rtpCh:
+				h.rtpPacketHandler(rtpPacket, counter, codecs)
 			case <-time.After(time.Second * 5):
 				h.cancel()
 				return
@@ -123,7 +116,21 @@ func (h *Handlers) HandleConnect() {
 	}()
 }
 
-func (h *Handlers) UpdateCounter(counter PacketCounter) {
+func (h *Handlers) rtpPacketHandler(packet types.RTPPacket, counter *PacketCounter, codecs map[string]types.CodecType) {
+	switch packet.Type {
+	case types.RTPTypeAudio:
+		counter.Audio++
+	case types.RTPTypeVideo:
+		//frameInfo := processor.GetFrameInfo(packet.Packet.Payload, codecs["video"])
+		counter.Video++
+	case types.RTCPTypeAudio:
+		counter.RTCPAudio++
+	case types.RTCPTypeVideo:
+		counter.RTCPVideo++
+	}
+}
+
+func (h *Handlers) UpdateCounter(counter *PacketCounter) {
 	h.ui.InfoLabels["Video"].SetText(fmt.Sprintf("%d", counter.Video))
 	h.ui.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", counter.Audio))
 	h.ui.InfoLabels["RTCPVideo"].SetText(fmt.Sprintf("%d", counter.RTCPVideo))

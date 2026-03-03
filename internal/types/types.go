@@ -1,5 +1,7 @@
 package types
 
+import "github.com/pion/rtp"
+
 type RTPType int
 
 const (
@@ -8,6 +10,11 @@ const (
 	RTPTypeAudio
 	RTCPTypeAudio
 )
+
+type RTPPacket struct {
+	Packet *rtp.Packet
+	Type   RTPType
+}
 
 type CodecType int
 
@@ -35,3 +42,10 @@ const (
 
 	NALU_UNKNOWN NALUType = 0
 )
+
+type FrameInfo struct {
+	Codec   string
+	Type    string
+	IsKey   bool
+	NaluRaw int
+}
