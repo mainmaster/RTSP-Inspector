@@ -1,7 +1,5 @@
 package types
 
-import "github.com/pion/rtp"
-
 type RTPType int
 
 const (
@@ -12,8 +10,8 @@ const (
 )
 
 type RTPPacket struct {
-	Packet *rtp.Packet
-	Type   RTPType
+	Payload []byte
+	Type    RTPType
 }
 
 type CodecType int
@@ -26,26 +24,25 @@ const (
 type NALUType int
 
 const (
-	H264_NALU_NON_IDR NALUType = 1
-	H264_NALU_IDR     NALUType = 5
-	H264_NALU_SPS     NALUType = 7
-	H264_NALU_PPS     NALUType = 8
-	H264_NALU_SEI     NALUType = 6
+	H264_NALU_NON_IDR NALUType = iota // Non-IDR (P/B-Frame)
+	H264_NALU_IDR                     // IDR (I-Frame)
+	H264_NALU_SPS                     // SPS
+	H264_NALU_PPS                     // PPS
+	H264_NALU_SEI                     // SEI
 
-	H265_NALU_TRAIL_R NALUType = 1  // Обычный P/B кадр
-	H265_NALU_IDR_W   NALUType = 19 // Ключевой кадр
-	H265_NALU_IDR_N   NALUType = 20 // Ключевой кадр (no leading)
-	H265_NALU_CRA     NALUType = 21 // Точка входа (CRA)
-	H265_NALU_VPS     NALUType = 32
-	H265_NALU_SPS     NALUType = 33
-	H265_NALU_PPS     NALUType = 34
+	H265_NALU_TRAIL_R // Обычный P/B кадр
+	H265_NALU_IDR_W   // Ключевой кадр
+	H265_NALU_IDR_N   // Ключевой кадр (no leading)
+	H265_NALU_CRA     // Точка входа (CRA)
+	H265_NALU_VPS     // VPS
+	H265_NALU_SPS     // SPS
+	H265_NALU_PPS     // PPS
 
 	NALU_UNKNOWN NALUType = 0
 )
 
 type FrameInfo struct {
-	Codec   string
-	Type    string
-	IsKey   bool
-	NaluRaw int
+	Codec    CodecType
+	NALUType NALUType
+	IsKey    bool
 }

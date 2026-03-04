@@ -13,8 +13,6 @@ import (
 	"rtsp-inspector/internal/rtsp_client/auth"
 	"rtsp-inspector/internal/types"
 	"strconv"
-
-	"github.com/pion/rtp"
 )
 
 type Client struct {
@@ -137,12 +135,12 @@ func (c *Client) RTPReader(ctx context.Context, ch chan types.RTPPacket) {
 				return
 			}
 
-			rtpPkt := &rtp.Packet{}
-			rtpPkt.Unmarshal(payload)
+			//rtpPkt := &rtp.Packet{}
+			//err = rtpPkt.Unmarshal(payload)
 
 			ch <- types.RTPPacket{
-				Type:   channel,
-				Packet: rtpPkt,
+				Type:    channel,
+				Payload: payload,
 			}
 		}
 	}

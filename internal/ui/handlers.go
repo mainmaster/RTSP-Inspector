@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/textproto"
 	"net/url"
+	"rtsp-inspector/internal/processor"
 	"rtsp-inspector/internal/types"
 	"strings"
 	"time"
@@ -59,14 +60,15 @@ func (h *Handlers) HandleConnect() {
 	req, _ = h.client.NewRequest("DESCRIBE", h.ui.URLEntry.Text)
 	h.ui.AppendLog(req.BuildRequest())
 	describeRes, _ := h.client.Do(req)
-	h.ui.AppendLog(buildOutputString(res.Header, res.Body))
+	h.ui.AppendLog(buildOutputString(describeRes.Header, describeRes.Body))
 
 	sessionIDs := make(map[string]struct{})
 	for _, t := range describeRes.GetTrackIDs() {
 		req, _ = h.client.NewRequest("SETUP", h.ui.URLEntry.Text)
 		req.SetTrackID(t)
-		res, err = h.client.Do(req)
-		h.ui.AppendLog(buildOutputString(res.Header, res.Body))
+		h.ui.AppendLog(req.BuildRequest())
+		setupRes, _ := h.client.Do(req)
+		h.ui.AppendLog(buildOutputString(setupRes.Header, setupRes.Body))
 		sessionIDs[res.GetSessionID()] = struct{}{}
 	}
 
@@ -121,7 +123,8 @@ func (h *Handlers) rtpPacketHandler(packet types.RTPPacket, counter *PacketCount
 	case types.RTPTypeAudio:
 		counter.Audio++
 	case types.RTPTypeVideo:
-		//frameInfo := processor.GetFrameInfo(packet.Packet.Payload, codecs["video"])
+		frameInfo := processor.GetFrameInfo(packet.Payload, codecs["video"])
+		fmt.Println(frameInfo)
 		counter.Video++
 	case types.RTCPTypeAudio:
 		counter.RTCPAudio++

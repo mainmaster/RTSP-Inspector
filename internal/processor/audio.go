@@ -9,10 +9,9 @@ import (
 )
 
 type AudioProcessor struct {
-	client            *rtsp_client.Client
-	codecType         types.CodecType
-	depacketizer      rtp.Depacketizer
-	AudioDataChannels DataChannels
+	client       *rtsp_client.Client
+	codecType    types.CodecType
+	depacketizer rtp.Depacketizer
 }
 type AudioDataChannels struct {
 	Ch     chan []byte
