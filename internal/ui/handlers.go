@@ -3,14 +3,15 @@ package ui
 import (
 	"context"
 	"fmt"
+	"fyne.io/fyne/v2"
+	"github.com/pions/webrtc/pkg/media/samplebuilder"
+
 	"net/textproto"
 	"net/url"
 	"rtsp-inspector/internal/processor"
 	"rtsp-inspector/internal/types"
 	"strings"
 	"time"
-
-	"fyne.io/fyne/v2"
 )
 
 func (h *Handlers) HandleConnect() {
@@ -124,6 +125,8 @@ func (h *Handlers) rtpPacketHandler(packet types.RTPPacket, counter *PacketCount
 		counter.Audio++
 	case types.RTPTypeVideo:
 		frameInfo := processor.GetFrameInfo(packet.Payload, codecs["video"])
+		//sb := rtp.samplebuilder.New(128, &codecs.H265Packet{}, 90000)
+		builder := samplebuilder.New(35)
 		fmt.Println(frameInfo)
 		counter.Video++
 	case types.RTCPTypeAudio:
