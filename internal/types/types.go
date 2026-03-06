@@ -41,8 +41,7 @@ const (
 )
 
 type FrameInfo struct {
-	Codec    CodecType
-	NALUType NALUType
-	NALUByte byte
-	IsKey    bool
+	Codec CodecType
+	NALUs []NALUType
+	IsKey bool
 }

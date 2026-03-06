@@ -20,24 +20,25 @@ func (h *Handlers) HandleConnect() {
 			h.cancel()
 		}
 		if err != nil {
-			h.ui.AppendLog("Error: " + err.Error())
+			// Ошибка
 		}
 		h.ui.BtnOpen.SetText("CONNECT")
 		return
 	}
 
-	if h.ui.URLEntry.Text == "" {
+	rtspURL := h.ui.URLEntry.Text
+	if rtspURL == "" {
 		return
 	}
 
 	if !h.client.IsEmptyConnection() {
 		_ = h.client.Close()
-		h.ui.AppendLog("Close old connection")
+		// Ошибка
 	}
 
-	u, err := url.Parse(h.ui.URLEntry.Text)
+	u, err := url.Parse(rtspURL)
 	if err != nil {
-		h.ui.AppendLog("Error: " + err.Error())
+		// Ошибка
 		return
 	}
 
@@ -46,44 +47,42 @@ func (h *Handlers) HandleConnect() {
 
 	err = h.client.Connect(*u)
 	if err != nil {
-		h.ui.AppendLog("Error: " + err.Error())
+		// Ошибка
 	}
-	h.ui.AppendLog("Connected: " + u.Host)
 	h.ui.BtnOpen.SetText("DISCONNECT")
 
-	req, _ := h.client.NewRequest("OPTIONS", h.ui.URLEntry.Text)
-	h.ui.AppendLog(req.BuildRequest())
+	req, _ := h.client.NewRequest("OPTIONS", rtspURL)
+	h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
 	res, _ := h.client.Do(req)
+	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
 
-	h.ui.AppendLog(buildOutputString(res.Header, res.Body))
-
-	req, _ = h.client.NewRequest("DESCRIBE", h.ui.URLEntry.Text)
-	h.ui.AppendLog(req.BuildRequest())
+	req, _ = h.client.NewRequest("DESCRIBE", rtspURL)
+	h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
 	describeRes, _ := h.client.Do(req)
-	h.ui.AppendLog(buildOutputString(describeRes.Header, describeRes.Body))
+	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, describeRes.Body), false)
 
 	sessionIDs := make(map[string]struct{})
 	for _, t := range describeRes.GetTrackIDs() {
-		req, _ = h.client.NewRequest("SETUP", h.ui.URLEntry.Text)
+		req, _ = h.client.NewRequest("SETUP", rtspURL)
 		req.SetTrackID(t)
-		h.ui.AppendLog(req.BuildRequest())
+		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
 		setupRes, _ := h.client.Do(req)
-		h.ui.AppendLog(buildOutputString(setupRes.Header, setupRes.Body))
+		h.ui.AddLogEntry(req.Method, buildOutputString(setupRes.Header, setupRes.Body), false)
 		sessionIDs[res.GetSessionID()] = struct{}{}
 	}
 
 	for sessionID, _ := range sessionIDs {
-		req, _ = h.client.NewRequest("PLAY", h.ui.URLEntry.Text)
+		req, _ = h.client.NewRequest("PLAY", rtspURL)
 		req.SetSessionID(sessionID)
-		h.ui.AppendLog(req.BuildRequest())
+		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
 
 		res, err = h.client.Do(req)
 		if err != nil {
-			h.ui.AppendLog("Error: " + err.Error())
+			// Ошибка
 			h.client.Close()
 			return
 		}
-		h.ui.AppendLog(buildOutputString(res.Header, res.Body))
+		h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
 	}
 
 	// wait PLAY rtsp_client response
@@ -116,7 +115,7 @@ func (h *Handlers) HandleConnect() {
 				}
 				info := vp.GetFrameInfo(frame)
 				if info != nil {
-					fmt.Printf("Frame: Codec=%v, Type=%v, Key=%v, NALU=0x%X\n", info.Codec, info.NALUType, info.IsKey, info.NALUByte)
+					fmt.Println(info)
 				}
 			case <-time.After(time.Second * 5):
 				h.cancel()

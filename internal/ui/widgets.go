@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"strings"
+	"fmt"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -9,19 +9,20 @@ import (
 )
 
 type Widgets struct {
-	URLEntry    *widget.Entry
-	LogOutput   *widget.Entry
-	LogScroll   *container.Scroll
-	RequestBody *widget.Entry
-	BtnOpen     *widget.Button
-	BtnOptions  *widget.Button
-	BtnDescribe *widget.Button
-	BtnSetup    *widget.Button
-	BtnPlay     *widget.Button
-	BtnClear    *widget.Button
-	BtnSend     *widget.Button
-	StatsForm   *widget.Form
-	InfoLabels  map[string]*widget.Label
+	URLEntry     *widget.Entry
+	LogOutput    *widget.Entry
+	RequestBody  *widget.Entry
+	BtnOpen      *widget.Button
+	BtnOptions   *widget.Button
+	BtnDescribe  *widget.Button
+	BtnSetup     *widget.Button
+	BtnPlay      *widget.Button
+	BtnClear     *widget.Button
+	BtnSend      *widget.Button
+	StatsForm    *widget.Form
+	InfoLabels   map[string]*widget.Label
+	LogAccordion *widget.Accordion // Вместо LogOutput
+	LogScroll    *container.Scroll
 }
 
 func NewUIWidgets() *Widgets {
@@ -49,29 +50,41 @@ func NewUIWidgets() *Widgets {
 		statsForm.Append(k, lbl)
 	}
 
+	accordion := widget.NewAccordion()
+	accordion.MultiOpen = true
+
 	return &Widgets{
-		URLEntry:    url,
-		LogOutput:   log,
-		LogScroll:   container.NewScroll(log),
-		RequestBody: requestBody,
-		BtnOptions:  widget.NewButton("OPTIONS", nil),
-		BtnOpen:     widget.NewButton("OPEN", nil),
-		BtnDescribe: widget.NewButton("DESCRIBE", nil),
-		BtnSetup:    widget.NewButton("SETUP", nil),
-		BtnPlay:     widget.NewButton("PLAY", nil),
-		BtnClear:    widget.NewButton("Clear Log", nil),
-		BtnSend:     widget.NewButton("Send", nil),
-		StatsForm:   statsForm,
-		InfoLabels:  infoLabels,
+		URLEntry:     url,
+		LogAccordion: accordion,
+		LogScroll:    container.NewScroll(accordion),
+		RequestBody:  requestBody,
+		BtnOptions:   widget.NewButton("OPTIONS", nil),
+		BtnOpen:      widget.NewButton("OPEN", nil),
+		BtnDescribe:  widget.NewButton("DESCRIBE", nil),
+		BtnSetup:     widget.NewButton("SETUP", nil),
+		BtnPlay:      widget.NewButton("PLAY", nil),
+		BtnClear:     widget.NewButton("Clear Log", nil),
+		BtnSend:      widget.NewButton("Send", nil),
+		StatsForm:    statsForm,
+		InfoLabels:   infoLabels,
 	}
 }
 
-func (ui *Widgets) AppendLog(msg string) {
+func (ui *Widgets) AddLogEntry(title string, body string, isRequest bool) {
+	content := widget.NewLabel(body)
+	content.Wrapping = fyne.TextWrapBreak
+
+	prefix := "▶ [RECV]"
+	if isRequest {
+		prefix = "◀ [SENT]"
+	}
+	title = fmt.Sprintf("%s %s", prefix, title)
+
+	item := widget.NewAccordionItem(title, content)
+
 	fyne.Do(func() {
-		ui.LogOutput.SetText(ui.LogOutput.Text + "\n" + "--------------------------" + "\n" + msg)
-		ui.LogOutput.CursorRow = len(strings.Split(ui.LogOutput.Text, "\n"))
+		ui.LogAccordion.Append(item)
+		// Авто-скролл вниз при добавлении
 		ui.LogScroll.ScrollToBottom()
-		ui.LogOutput.Refresh()
-		ui.LogScroll.Refresh()
 	})
 }
