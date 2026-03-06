@@ -104,16 +104,20 @@ func (h *Handlers) HandleConnect() {
 		for {
 			select {
 			case rtpPacket := <-rtpCh:
+				h.IncrementCounter(rtpPacket, counter)
 				err = vp.Push(rtpPacket.Payload)
 				if err != nil {
 					fmt.Println("Error: " + err.Error())
 					h.cancel()
 				}
 				frame := vp.Pop()
-				if frame != nil {
-					fmt.Println(frame.Data)
+				if frame == nil {
+					break // Кадр еще не собран полностью
 				}
-				h.IncrementCounter(rtpPacket, counter)
+				info := vp.GetFrameInfo(frame)
+				if info != nil {
+					fmt.Printf("Frame: Codec=%v, Type=%v, Key=%v, NALU=0x%X\n", info.Codec, info.NALUType, info.IsKey, info.NALUByte)
+				}
 			case <-time.After(time.Second * 5):
 				h.cancel()
 				return

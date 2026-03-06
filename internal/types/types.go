@@ -24,11 +24,12 @@ const (
 type NALUType int
 
 const (
-	H264_NALU_NON_IDR NALUType = iota // Non-IDR (P/B-Frame)
-	H264_NALU_IDR                     // IDR (I-Frame)
-	H264_NALU_SPS                     // SPS
-	H264_NALU_PPS                     // PPS
-	H264_NALU_SEI                     // SEI
+	NALU_UNKNOWN      NALUType = iota
+	H264_NALU_NON_IDR          // Non-IDR (P/B-Frame)
+	H264_NALU_IDR              // IDR (I-Frame)
+	H264_NALU_SPS              // SPS
+	H264_NALU_PPS              // PPS
+	H264_NALU_SEI              // SEI
 
 	H265_NALU_TRAIL_R // Обычный P/B кадр
 	H265_NALU_IDR_W   // Ключевой кадр
@@ -37,12 +38,11 @@ const (
 	H265_NALU_VPS     // VPS
 	H265_NALU_SPS     // SPS
 	H265_NALU_PPS     // PPS
-
-	NALU_UNKNOWN NALUType = 0
 )
 
 type FrameInfo struct {
 	Codec    CodecType
 	NALUType NALUType
+	NALUByte byte
 	IsKey    bool
 }

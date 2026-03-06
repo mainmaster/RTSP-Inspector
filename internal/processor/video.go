@@ -15,7 +15,8 @@ const (
 )
 
 type VideoProcessor struct {
-	sb *samplebuilder.SampleBuilder
+	sb    *samplebuilder.SampleBuilder
+	codec types.CodecType
 }
 
 func NewVideoProcessor(codec types.CodecType) *VideoProcessor {
@@ -30,7 +31,8 @@ func NewVideoProcessor(codec types.CodecType) *VideoProcessor {
 	}
 
 	return &VideoProcessor{
-		sb: samplebuilder.New(maxLate, depacketizer, videoSampleRate),
+		sb:    samplebuilder.New(maxLate, depacketizer, videoSampleRate),
+		codec: codec,
 	}
 }
 
@@ -49,60 +51,73 @@ func (v *VideoProcessor) Pop() *media.Sample {
 	return sample
 }
 
-func (v *VideoProcessor) GetFrameInfo(frame *media.Sample, codec types.CodecType) *types.FrameInfo {
-	/*
-		frameInfo := &types.FrameInfo{}
-		frameInfo.Codec = codec
+func (v *VideoProcessor) GetFrameInfo(frame *media.Sample) *types.FrameInfo {
+	if len(frame.Data) < 5 {
+		return nil
+	}
 
-		if codec == types.H264 { // H264
-			// Заголовок H264: [7 битов: 0] [1 бит: тип] -> берем 0x1F
-			naluType := nalu[0] & 0x1F
-			switch naluType {
-			case 5:
-				frameInfo.NALUType = types.H264_NALU_IDR
-				frameInfo.IsKey = true
-			case 1:
-				frameInfo.NALUType = types.H264_NALU_NON_IDR
-			case 7:
-				frameInfo.NALUType = types.H264_NALU_SPS
-			case 8:
-				frameInfo.NALUType = types.H264_NALU_PPS
-			case 6:
-				frameInfo.NALUType = types.H264_NALU_SEI
-			default:
-				frameInfo.NALUType = types.NALU_UNKNOWN
-			}
-		} else if codec == types.H265 {
-			if len(nalu) < 1 {
-				return nil
-			}
-			// H265
-			// Заголовок H265: [1 бит: 0] [6 бит: тип] [3 бита: слой] [6 бит: ...]
-			// Тип лежит в 1-м байте, сдвинутый на 1 бит вправо
-			naluType := (nalu[0] >> 1) & 0x3F
-			switch {
-			case naluType == 1:
-				frameInfo.NALUType = types.H265_NALU_TRAIL_R
-			case naluType >= 16 && naluType <= 19:
-				frameInfo.NALUType = types.H265_NALU_IDR_W
-				frameInfo.IsKey = true
-			case naluType == 20:
-				frameInfo.NALUType = types.H265_NALU_IDR_N
-				frameInfo.IsKey = true
-			case naluType == 21:
-				frameInfo.NALUType = types.H265_NALU_CRA
-			case naluType == 32:
-				frameInfo.NALUType = types.H265_NALU_VPS
-			case naluType == 33:
-				frameInfo.NALUType = types.H265_NALU_SPS
-			case naluType == 34:
-				frameInfo.NALUType = types.H265_NALU_PPS
-			default:
-				frameInfo.NALUType = types.NALU_UNKNOWN
-			}
+	frameInfo := &types.FrameInfo{}
+	frameInfo.Codec = v.codec
+
+	data := frame.Data
+	// Пропускаем Annex-B Start Code (00 00 00 01 или 00 00 01)
+	headerOffset := 0
+	if data[0] == 0x00 && data[1] == 0x00 {
+		if data[2] == 0x01 {
+			headerOffset = 3
+		} else if data[2] == 0x00 && data[3] == 0x01 {
+			headerOffset = 4
 		}
-		return frameInfo
+	}
 
-	*/
-	return nil
+	naluByte := data[headerOffset]
+
+	if v.codec == types.H264 { // H264
+		// Заголовок H264: [7 битов: 0] [1 бит: тип] -> берем 0x1F
+		naluType := naluByte & 0x1F
+		switch naluType {
+		case 5:
+			frameInfo.NALUType = types.H264_NALU_IDR
+			frameInfo.IsKey = true
+		case 1:
+			frameInfo.NALUType = types.H264_NALU_NON_IDR
+		case 7:
+			frameInfo.NALUType = types.H264_NALU_SPS
+		case 8:
+			frameInfo.NALUType = types.H264_NALU_PPS
+		case 6:
+			frameInfo.NALUType = types.H264_NALU_SEI
+		default:
+			frameInfo.NALUType = types.NALU_UNKNOWN
+		}
+		frameInfo.NALUByte = naluType
+	} else if v.codec == types.H265 {
+		// H265
+		// Заголовок H265: [1 бит: 0] [6 бит: тип] [3 бита: слой] [6 бит: ...]
+		// Тип лежит в 1-м байте, сдвинутый на 1 бит вправо
+		naluType := (naluByte >> 1) & 0x3F
+
+		switch {
+		case naluType == 1:
+			frameInfo.NALUType = types.H265_NALU_TRAIL_R
+		case naluType >= 16 && naluType <= 19:
+			frameInfo.NALUType = types.H265_NALU_IDR_W
+			frameInfo.IsKey = true
+		case naluType == 20:
+			frameInfo.NALUType = types.H265_NALU_IDR_N
+			frameInfo.IsKey = true
+		case naluType == 21:
+			frameInfo.NALUType = types.H265_NALU_CRA
+		case naluType == 32:
+			frameInfo.NALUType = types.H265_NALU_VPS
+		case naluType == 33:
+			frameInfo.NALUType = types.H265_NALU_SPS
+		case naluType == 34:
+			frameInfo.NALUType = types.H265_NALU_PPS
+		default:
+			frameInfo.NALUType = types.NALU_UNKNOWN
+		}
+		frameInfo.NALUByte = naluType
+	}
+	return frameInfo
 }
