@@ -3,15 +3,14 @@ package ui
 import (
 	"context"
 	"fmt"
-	"fyne.io/fyne/v2"
-	"github.com/pions/webrtc/pkg/media/samplebuilder"
-
 	"net/textproto"
 	"net/url"
 	"rtsp-inspector/internal/processor"
 	"rtsp-inspector/internal/types"
 	"strings"
 	"time"
+
+	"fyne.io/fyne/v2"
 )
 
 func (h *Handlers) HandleConnect() {
@@ -99,12 +98,22 @@ func (h *Handlers) HandleConnect() {
 
 	uiTicker := time.NewTicker(200 * time.Millisecond)
 
+	vp := processor.NewVideoProcessor(codecs["video"])
 	go func() {
 		defer uiTicker.Stop()
 		for {
 			select {
 			case rtpPacket := <-rtpCh:
-				h.rtpPacketHandler(rtpPacket, counter, codecs)
+				err = vp.Push(rtpPacket.Payload)
+				if err != nil {
+					fmt.Println("Error: " + err.Error())
+					h.cancel()
+				}
+				frame := vp.Pop()
+				if frame != nil {
+					fmt.Println(frame.Data)
+				}
+				h.IncrementCounter(rtpPacket, counter)
 			case <-time.After(time.Second * 5):
 				h.cancel()
 				return
@@ -119,15 +128,11 @@ func (h *Handlers) HandleConnect() {
 	}()
 }
 
-func (h *Handlers) rtpPacketHandler(packet types.RTPPacket, counter *PacketCounter, codecs map[string]types.CodecType) {
+func (h *Handlers) IncrementCounter(packet types.RTPPacket, counter *PacketCounter) {
 	switch packet.Type {
 	case types.RTPTypeAudio:
 		counter.Audio++
 	case types.RTPTypeVideo:
-		frameInfo := processor.GetFrameInfo(packet.Payload, codecs["video"])
-		//sb := rtp.samplebuilder.New(128, &codecs.H265Packet{}, 90000)
-		builder := samplebuilder.New(35)
-		fmt.Println(frameInfo)
 		counter.Video++
 	case types.RTCPTypeAudio:
 		counter.RTCPAudio++

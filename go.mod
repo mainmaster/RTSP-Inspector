@@ -5,6 +5,9 @@ go 1.25.6
 require (
 	fyne.io/fyne/v2 v2.7.2
 	github.com/pion/rtcp v1.2.16
+	github.com/pion/rtp v1.10.1
+	github.com/pion/webrtc/v3 v3.3.6
+	github.com/pions/webrtc v1.2.0
 	github.com/pixelbender/go-sdp v1.2.0
 )
 
@@ -31,8 +34,6 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/nicksnyder/go-i18n/v2 v2.5.1 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
-	github.com/pion/rtp v1.10.1 // indirect
-	github.com/pions/webrtc v1.2.0 // indirect
 	github.com/pkg/errors v0.8.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rymdport/portal v0.4.2 // indirect

@@ -135,9 +135,6 @@ func (c *Client) RTPReader(ctx context.Context, ch chan types.RTPPacket) {
 				return
 			}
 
-			//rtpPkt := &rtp.Packet{}
-			//err = rtpPkt.Unmarshal(payload)
-
 			ch <- types.RTPPacket{
 				Type:    channel,
 				Payload: payload,
