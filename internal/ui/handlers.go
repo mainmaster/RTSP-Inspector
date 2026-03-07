@@ -51,11 +51,15 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 		defer uiTicker.Stop()
 		for {
 			select {
-			case rtpPacket := <-rtpCh:
+			case rtpPacket, ok := <-rtpCh:
+				if !ok {
+					h.cancel()
+					return
+				}
 				h.IncrementCounter(rtpPacket, counter)
 				err := vp.Push(rtpPacket.Payload)
 				if err != nil {
-					fmt.Println("Error: " + err.Error())
+					// error
 					h.cancel()
 				}
 				frame := vp.Pop()
@@ -103,6 +107,11 @@ func (h *Handlers) rtspFlow(rtspURL string) error {
 	if err != nil {
 		return err
 	}
+	codesc, err := describeRes.GetCodecs()
+	if err != nil {
+		return err
+	}
+	h.codecs = codesc
 	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, describeRes.Body), false)
 
 	sessionIDs := make(map[string]struct{})
@@ -168,6 +177,7 @@ func (h *Handlers) connect(rtspURL string) {
 	}
 	h.ui.BtnOpen.SetText("DISCONNECT")
 	h.isConnected = true
+	h.UpdateCounter(&PacketCounter{})
 }
 
 func (h *Handlers) IncrementCounter(packet types.RTPPacket, counter *PacketCounter) {

@@ -107,6 +107,8 @@ func (c *Client) readRTSPBody(headers textproto.MIMEHeader) ([]byte, error) {
 }
 
 func (c *Client) RTPReader(ctx context.Context, ch chan types.RTPPacket) {
+	defer close(ch)
+
 	for {
 		select {
 		case <-ctx.Done():
