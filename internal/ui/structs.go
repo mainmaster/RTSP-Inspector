@@ -13,6 +13,7 @@ type Handlers struct {
 	isConnected bool
 	codecs      map[string]types.CodecType
 	pc          *PacketCounter
+	naluCounter map[types.NALUType]int
 }
 
 type PacketCounter struct {

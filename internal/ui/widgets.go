@@ -21,11 +21,9 @@ type Widgets struct {
 }
 
 func NewUIWidgets() *Widgets {
-	// Поле ввода URL
 	url := widget.NewEntry()
 	url.SetText("rtsp://admin:qwerty123@192.168.31.176:554/RVi/1/1")
 
-	// Лог (многострочный)
 	log := widget.NewEntry()
 	log.MultiLine = true
 	log.MultiLine = true
@@ -55,6 +53,7 @@ func NewUIWidgets() *Widgets {
 		BtnOpen:      widget.NewButton("CONNECT", nil),
 		StatsForm:    statsForm,
 		InfoLabels:   infoLabels,
+		NALULabels:   make(map[types.NALUType]*widget.Label),
 	}
 }
 
@@ -67,9 +66,7 @@ func (ui *Widgets) AddLogEntry(title types.RTSPMethod, body string, isRequest bo
 		prefix = "◀ [SENT]"
 	}
 	timestamp := time.Now().Format("15:04:05.000")
-
 	fullTitle := fmt.Sprintf("[%s] %s %s", timestamp, prefix, string(title))
-
 	item := widget.NewAccordionItem(fullTitle, content)
 
 	fyne.Do(func() {

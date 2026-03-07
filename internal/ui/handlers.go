@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/widget"
 )
 
 func (h *Handlers) HandleConnect() {
@@ -59,7 +60,7 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 					h.cancel()
 					return
 				}
-				h.IncrementCounter(rtpPacket)
+				h.incrementCounter(rtpPacket)
 				err := vp.Push(rtpPacket.Payload)
 				if err != nil {
 					// error
@@ -71,13 +72,14 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 				}
 				info := vp.GetFrameInfo(frame)
 				if info != nil {
-					fmt.Println(info.NALUs)
+					h.incrementNALUCounter(info.NALUs)
 				}
 			case <-time.After(time.Second * 5):
 				h.cancel()
 				return
 			case <-uiTicker.C:
-				h.UpdateCounter()
+				h.updateNTPCounter()
+				h.updateNaluCounter()
 			case <-ctx.Done():
 				return
 			}
@@ -185,10 +187,11 @@ func (h *Handlers) connect(rtspURL string) {
 	})
 	h.isConnected = true
 	h.pc = &PacketCounter{}
-	h.UpdateCounter()
+	h.naluCounter = map[types.NALUType]int{}
+	h.updateNTPCounter()
 }
 
-func (h *Handlers) IncrementCounter(packet types.RTPPacket) {
+func (h *Handlers) incrementCounter(packet types.RTPPacket) {
 	switch packet.Type {
 	case types.RTPTypeAudio:
 		h.pc.Audio++
@@ -201,13 +204,39 @@ func (h *Handlers) IncrementCounter(packet types.RTPPacket) {
 	}
 }
 
-func (h *Handlers) UpdateCounter() {
+func (h *Handlers) updateNTPCounter() {
 	fyne.Do(func() {
 		h.ui.InfoLabels["Video"].SetText(fmt.Sprintf("%d", h.pc.Video))
 		h.ui.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", h.pc.Audio))
 		h.ui.InfoLabels["RTCPVideo"].SetText(fmt.Sprintf("%d", h.pc.RTCPVideo))
 		h.ui.InfoLabels["RTCPAudio"].SetText(fmt.Sprintf("%d", h.pc.RTCPAudio))
 		h.ui.InfoLabels["Packets"].SetText(fmt.Sprintf("%d", h.pc.Video+h.pc.Audio+h.pc.RTCPVideo+h.pc.RTCPAudio))
+	})
+}
+
+func (h *Handlers) incrementNALUCounter(nalus []types.NALUType) {
+	for _, n := range nalus {
+		h.naluCounter[n]++
+	}
+}
+
+func (h *Handlers) updateNaluCounter() {
+	fyne.Do(func() {
+		for nalu, count := range h.naluCounter {
+			if _, lux := h.ui.NALULabels[nalu]; !lux {
+				name := types.NALUNames[nalu]
+				if name == "" {
+					continue
+				}
+
+				newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
+				h.ui.NALULabels[nalu] = newLabel
+				h.ui.StatsForm.Append(name, newLabel)
+			}
+
+			// Обновляем значение
+			h.ui.NALULabels[nalu].SetText(fmt.Sprintf("%d", count))
+		}
 	})
 }
 

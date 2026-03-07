@@ -122,6 +122,8 @@ func (v *VideoProcessor) processH265(data []byte) *types.FrameInfo {
 			t = types.H265_NALU_SPS
 		case naluType == 34:
 			t = types.H265_NALU_PPS
+		case naluType == 39:
+			t = types.H265_NALU_PREFIX_SEI
 		default:
 			t = types.NALU_UNKNOWN
 		}

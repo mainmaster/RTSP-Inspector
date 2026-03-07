@@ -21,7 +21,7 @@ func StartApp() {
 
 	content := container.NewBorder(
 		makeTopPanel(ui),
-		makeBottomPanel(ui),
+		makeBottomPanel(),
 		nil,
 		nil,
 		makeCenterContent(ui),
@@ -44,18 +44,13 @@ func makeTopPanel(ui *Widgets) fyne.CanvasObject {
 
 func makeCenterContent(ui *Widgets) fyne.CanvasObject {
 	top := ui.LogScroll
-	gridHoriz := container.NewHBox(
-		ui.StatsForm,
-	)
-	gridFixed := container.NewVBox(gridHoriz, layout.NewSpacer())
-	bottom := container.NewStack(container.NewScroll(gridFixed))
-
-	split := container.NewVSplit(top, bottom)
-	split.Offset = 0.5
+	statsScroll := container.NewVScroll(ui.StatsForm)
+	split := container.NewVSplit(top, statsScroll)
+	split.Offset = 0.6
 	return split
 }
 
-func makeBottomPanel(ui *Widgets) fyne.CanvasObject {
+func makeBottomPanel() fyne.CanvasObject {
 	return container.NewHBox(
 		layout.NewSpacer(),
 		layout.NewSpacer(),
