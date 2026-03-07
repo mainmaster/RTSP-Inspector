@@ -45,7 +45,7 @@ func NewUIWidgets() *Widgets {
 	infoLabels := make(map[string]*widget.Label)
 	keys := []string{"Packets", "Video", "Audio", "RTCPVideo", "RTCPAudio"}
 	for _, k := range keys {
-		lbl := widget.NewLabel("-") // Ставим прочерк по умолчанию
+		lbl := widget.NewLabel("-")
 		infoLabels[k] = lbl
 		statsForm.Append(k, lbl)
 	}

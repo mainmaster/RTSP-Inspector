@@ -3,12 +3,15 @@ package ui
 import (
 	"context"
 	"rtsp-inspector/internal/rtsp_client"
+	"rtsp-inspector/internal/types"
 )
 
 type Handlers struct {
-	ui     *Widgets
-	client *rtsp_client.Client
-	cancel context.CancelFunc
+	ui          *Widgets
+	client      *rtsp_client.Client
+	cancel      context.CancelFunc
+	isConnected bool
+	codecs      map[string]types.CodecType
 }
 
 type PacketCounter struct {

@@ -14,108 +14,57 @@ import (
 )
 
 func (h *Handlers) HandleConnect() {
-	if h.ui.BtnOpen.Text == "DISCONNECT" {
-		err := h.client.Close()
-		if h.cancel != nil {
-			h.cancel()
-		}
-		if err != nil {
-			// Ошибка
-		}
-		h.ui.BtnOpen.SetText("CONNECT")
-		return
-	}
-
 	rtspURL := h.ui.URLEntry.Text
 	if rtspURL == "" {
-		return
-	}
-
-	if !h.client.IsEmptyConnection() {
-		_ = h.client.Close()
-		// Ошибка
-	}
-
-	u, err := url.Parse(rtspURL)
-	if err != nil {
-		// Ошибка
 		return
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
 
-	err = h.client.Connect(*u)
+	if !h.isConnected {
+		h.connect(rtspURL)
+	} else {
+		h.disconnect()
+	}
+
+	err := h.rtspFlow(rtspURL)
 	if err != nil {
-		// Ошибка
-	}
-	h.ui.BtnOpen.SetText("DISCONNECT")
-
-	req, _ := h.client.NewRequest("OPTIONS", rtspURL)
-	h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
-	res, _ := h.client.Do(req)
-	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
-
-	req, _ = h.client.NewRequest("DESCRIBE", rtspURL)
-	h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
-	describeRes, _ := h.client.Do(req)
-	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, describeRes.Body), false)
-
-	sessionIDs := make(map[string]struct{})
-	for _, t := range describeRes.GetTrackIDs() {
-		req, _ = h.client.NewRequest("SETUP", rtspURL)
-		req.SetTrackID(t)
-		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
-		setupRes, _ := h.client.Do(req)
-		h.ui.AddLogEntry(req.Method, buildOutputString(setupRes.Header, setupRes.Body), false)
-		sessionIDs[res.GetSessionID()] = struct{}{}
+		fmt.Println(err)
 	}
 
-	for sessionID, _ := range sessionIDs {
-		req, _ = h.client.NewRequest("PLAY", rtspURL)
-		req.SetSessionID(sessionID)
-		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
-
-		res, err = h.client.Do(req)
-		if err != nil {
-			// Ошибка
-			h.client.Close()
-			return
-		}
-		h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
-	}
-
-	// wait PLAY rtsp_client response
 	time.Sleep(1 * time.Second)
 
+	h.rtpReaderFlow(ctx)
+}
+
+func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 	rtpCh := make(chan types.RTPPacket)
 	go h.client.RTPReader(ctx, rtpCh)
-
-	codecs, _ := describeRes.GetCodecs()
 
 	counter := &PacketCounter{}
 
 	uiTicker := time.NewTicker(200 * time.Millisecond)
 
-	vp := processor.NewVideoProcessor(codecs["video"])
+	vp := processor.NewVideoProcessor(h.codecs["video"])
 	go func() {
 		defer uiTicker.Stop()
 		for {
 			select {
 			case rtpPacket := <-rtpCh:
 				h.IncrementCounter(rtpPacket, counter)
-				err = vp.Push(rtpPacket.Payload)
+				err := vp.Push(rtpPacket.Payload)
 				if err != nil {
 					fmt.Println("Error: " + err.Error())
 					h.cancel()
 				}
 				frame := vp.Pop()
 				if frame == nil {
-					break // Кадр еще не собран полностью
+					break
 				}
 				info := vp.GetFrameInfo(frame)
 				if info != nil {
-					fmt.Println(info)
+					fmt.Println(info.NALUs)
 				}
 			case <-time.After(time.Second * 5):
 				h.cancel()
@@ -129,6 +78,96 @@ func (h *Handlers) HandleConnect() {
 			}
 		}
 	}()
+}
+
+func (h *Handlers) rtspFlow(rtspURL string) error {
+	req, err := h.client.NewRequest("OPTIONS", rtspURL)
+	if err != nil {
+		return err
+	}
+
+	h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+	res, err := h.client.Do(req)
+	if err != nil {
+		return err
+	}
+	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
+
+	req, err = h.client.NewRequest("DESCRIBE", rtspURL)
+	if err != nil {
+		return err
+	}
+	h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+
+	describeRes, err := h.client.Do(req)
+	if err != nil {
+		return err
+	}
+	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, describeRes.Body), false)
+
+	sessionIDs := make(map[string]struct{})
+	for _, t := range describeRes.GetTrackIDs() {
+		req, err = h.client.NewRequest("SETUP", rtspURL)
+		if err != nil {
+			return err
+		}
+		req.SetTrackID(t)
+		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+		setupRes, setupErr := h.client.Do(req)
+		if setupErr != nil {
+			return setupErr
+		}
+		h.ui.AddLogEntry(req.Method, buildOutputString(setupRes.Header, setupRes.Body), false)
+		sessionIDs[res.GetSessionID()] = struct{}{}
+	}
+
+	for sessionID, _ := range sessionIDs {
+		req, err = h.client.NewRequest("PLAY", rtspURL)
+		if err != nil {
+			return err
+		}
+		req.SetSessionID(sessionID)
+		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+
+		res, err = h.client.Do(req)
+		if err != nil {
+			return err
+		}
+		h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
+	}
+	return nil
+}
+
+func (h *Handlers) disconnect() {
+	err := h.client.Close()
+	if h.cancel != nil {
+		h.cancel()
+	}
+	if err != nil {
+		// Ошибка
+	}
+	h.ui.BtnOpen.SetText("CONNECT")
+
+	if !h.client.IsEmptyConnection() {
+		_ = h.client.Close()
+		// Ошибка
+	}
+	h.isConnected = false
+}
+
+func (h *Handlers) connect(rtspURL string) {
+	u, err := url.Parse(rtspURL)
+	if err != nil {
+		// Ошибка
+		return
+	}
+
+	err = h.client.Connect(*u)
+	if err != nil {
+		// Ошибка
+	}
+	h.ui.BtnOpen.SetText("DISCONNECT")
+	h.isConnected = true
 }
 
 func (h *Handlers) IncrementCounter(packet types.RTPPacket, counter *PacketCounter) {

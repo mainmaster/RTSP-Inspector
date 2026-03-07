@@ -69,7 +69,7 @@ func (v *VideoProcessor) GetFrameInfo(frame *media.Sample) *types.FrameInfo {
 func (v *VideoProcessor) processH264(data []byte) *types.FrameInfo {
 	info := &types.FrameInfo{Codec: types.H264}
 
-	v.forEachNALU(data, func(naluByte byte, isFirst bool) {
+	forEachNALU(data, func(naluByte byte, isFirst bool) {
 		naluType := int(naluByte & 0x1F)
 
 		var t types.NALUType
@@ -97,7 +97,7 @@ func (v *VideoProcessor) processH265(data []byte) *types.FrameInfo {
 		NALUs: make([]types.NALUType, 0),
 	}
 
-	v.forEachNALU(data, func(naluByte byte, isFirst bool) {
+	forEachNALU(data, func(naluByte byte, isFirst bool) {
 		naluType := int((naluByte >> 1) & 0x3F)
 		var t types.NALUType
 		isKeyNALU := false
@@ -134,7 +134,7 @@ func (v *VideoProcessor) processH265(data []byte) *types.FrameInfo {
 	return info
 }
 
-func (v *VideoProcessor) forEachNALU(data []byte, handler func(naluByte byte, isFirst bool)) {
+func forEachNALU(data []byte, handler func(naluByte byte, isFirst bool)) {
 	first := true
 	for i := 0; i < len(data)-3; i++ {
 		if data[i] == 0 && data[i+1] == 0 {
