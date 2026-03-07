@@ -1,5 +1,16 @@
 package types
 
+type RTSPMethod string
+
+const (
+	MethodOptions  RTSPMethod = "OPTIONS"
+	MethodDescribe RTSPMethod = "DESCRIBE"
+	MethodSetup    RTSPMethod = "SETUP"
+	MethodPlay     RTSPMethod = "PLAY"
+	MethodPause    RTSPMethod = "PAUSE"
+	MethodTeardown RTSPMethod = "TEARDOWN"
+)
+
 type RTPType int
 
 const (
@@ -39,6 +50,22 @@ const (
 	H265_NALU_SPS     // SPS
 	H265_NALU_PPS     // PPS
 )
+
+var NALUNames = map[NALUType]string{
+	NALU_UNKNOWN:      "UNKNOWN",
+	H264_NALU_NON_IDR: "H264_NON_IDR",
+	H264_NALU_IDR:     "H264_IDR",
+	H264_NALU_SPS:     "H264_SPS",
+	H264_NALU_PPS:     "H264_PPS",
+	H264_NALU_SEI:     "H264_SEI",
+	H265_NALU_TRAIL_R: "H265_TRAIL_R",
+	H265_NALU_IDR_W:   "H265_IDR_W",
+	H265_NALU_IDR_N:   "H265_IDR_N",
+	H265_NALU_CRA:     "H265_CRA",
+	H265_NALU_VPS:     "H265_VPS",
+	H265_NALU_SPS:     "H265_SPS",
+	H265_NALU_PPS:     "H265_PPS",
+}
 
 type FrameInfo struct {
 	Codec CodecType

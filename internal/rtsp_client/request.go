@@ -3,17 +3,9 @@ package rtsp_client
 import (
 	"fmt"
 	"net/url"
+	"rtsp-inspector/internal/types"
 	"strconv"
 	"strings"
-)
-
-const (
-	MethodOptions  = "OPTIONS"
-	MethodDescribe = "DESCRIBE"
-	MethodSetup    = "SETUP"
-	MethodPlay     = "PLAY"
-	MethodPause    = "PAUSE"
-	MethodTeardown = "TEARDOWN"
 )
 
 type Credentials struct {
@@ -28,14 +20,14 @@ func (h Header) Add(key, value string) {
 }
 
 type Request struct {
-	Method  string
+	Method  types.RTSPMethod
 	URL     url.URL
 	Header  Header
 	trackID int
 	client  *Client
 }
 
-func (c *Client) NewRequest(method, rtspURL string) (*Request, error) {
+func (c *Client) NewRequest(method types.RTSPMethod, rtspURL string) (*Request, error) {
 	parsedURL, err := url.Parse(rtspURL)
 	if err != nil {
 		return nil, err
@@ -83,14 +75,14 @@ func (r *Request) BuildRequest() string {
 		b.WriteString("\r\n")
 	}
 
-	if r.Method == MethodSetup {
+	if r.Method == types.MethodSetup {
 		if _, ok := r.Header["Transport"]; !ok {
 			b.WriteString(fmt.Sprintf("Transport: RTP/AVP/TCP;interleaved=%d-%d", r.trackID*2, r.trackID*2+1))
 			b.WriteString("\r\n")
 		}
 	}
 
-	if r.Method == MethodDescribe {
+	if r.Method == types.MethodDescribe {
 		if _, ok := r.Header["Accept"]; !ok {
 			b.WriteString("Accept: application/sdp")
 			b.WriteString("\r\n")

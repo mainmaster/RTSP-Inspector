@@ -77,9 +77,7 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 				h.cancel()
 				return
 			case <-uiTicker.C:
-				fyne.Do(func() {
-					h.UpdateCounter()
-				})
+				h.UpdateCounter()
 			case <-ctx.Done():
 				return
 			}
@@ -110,11 +108,11 @@ func (h *Handlers) rtspFlow(rtspURL string) error {
 	if err != nil {
 		return err
 	}
-	codesc, err := describeRes.GetCodecs()
+	codecs, err := describeRes.GetCodecs()
 	if err != nil {
 		return err
 	}
-	h.codecs = codesc
+	h.codecs = codecs
 	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, describeRes.Body), false)
 
 	sessionIDs := make(map[string]struct{})
@@ -204,11 +202,13 @@ func (h *Handlers) IncrementCounter(packet types.RTPPacket) {
 }
 
 func (h *Handlers) UpdateCounter() {
-	h.ui.InfoLabels["Video"].SetText(fmt.Sprintf("%d", h.pc.Video))
-	h.ui.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", h.pc.Audio))
-	h.ui.InfoLabels["RTCPVideo"].SetText(fmt.Sprintf("%d", h.pc.RTCPVideo))
-	h.ui.InfoLabels["RTCPAudio"].SetText(fmt.Sprintf("%d", h.pc.RTCPAudio))
-	h.ui.InfoLabels["Packets"].SetText(fmt.Sprintf("%d", h.pc.Video+h.pc.Audio+h.pc.RTCPVideo+h.pc.RTCPAudio))
+	fyne.Do(func() {
+		h.ui.InfoLabels["Video"].SetText(fmt.Sprintf("%d", h.pc.Video))
+		h.ui.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", h.pc.Audio))
+		h.ui.InfoLabels["RTCPVideo"].SetText(fmt.Sprintf("%d", h.pc.RTCPVideo))
+		h.ui.InfoLabels["RTCPAudio"].SetText(fmt.Sprintf("%d", h.pc.RTCPAudio))
+		h.ui.InfoLabels["Packets"].SetText(fmt.Sprintf("%d", h.pc.Video+h.pc.Audio+h.pc.RTCPVideo+h.pc.RTCPAudio))
+	})
 }
 
 func buildOutputString(headers textproto.MIMEHeader, body []byte) string {

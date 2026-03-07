@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"rtsp-inspector/internal/types"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -57,7 +58,7 @@ func NewUIWidgets() *Widgets {
 	}
 }
 
-func (ui *Widgets) AddLogEntry(title string, body string, isRequest bool) {
+func (ui *Widgets) AddLogEntry(title types.RTSPMethod, body string, isRequest bool) {
 	content := widget.NewLabel(body)
 	content.Wrapping = fyne.TextWrapBreak
 
@@ -65,13 +66,14 @@ func (ui *Widgets) AddLogEntry(title string, body string, isRequest bool) {
 	if isRequest {
 		prefix = "◀ [SENT]"
 	}
-	title = fmt.Sprintf("%s %s", prefix, title)
+	timestamp := time.Now().Format("15:04:05.000")
 
-	item := widget.NewAccordionItem(title, content)
+	fullTitle := fmt.Sprintf("[%s] %s %s", timestamp, prefix, string(title))
+
+	item := widget.NewAccordionItem(fullTitle, content)
 
 	fyne.Do(func() {
 		ui.LogAccordion.Append(item)
-		// Авто-скролл вниз при добавлении
 		ui.LogScroll.ScrollToBottom()
 	})
 }
