@@ -79,6 +79,8 @@ func (v *VideoProcessor) processH264(data []byte) *types.FrameInfo {
 		case 5:
 			t = types.H264_NALU_IDR
 			info.IsKey = true
+		case 6:
+			t = types.H264_NALU_SEI
 		case 7:
 			t = types.H264_NALU_SPS
 		case 8:
