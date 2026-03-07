@@ -12,6 +12,7 @@ type Handlers struct {
 	cancel      context.CancelFunc
 	isConnected bool
 	codecs      map[string]types.CodecType
+	pc          *PacketCounter
 }
 
 type PacketCounter struct {

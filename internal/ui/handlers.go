@@ -22,27 +22,30 @@ func (h *Handlers) HandleConnect() {
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
 
-	if !h.isConnected {
-		h.connect(rtspURL)
-	} else {
-		h.disconnect()
-	}
+	go func() {
+		if !h.isConnected {
+			h.connect(rtspURL)
+		} else {
+			h.disconnect()
+			return
+		}
 
-	err := h.rtspFlow(rtspURL)
-	if err != nil {
-		fmt.Println(err)
-	}
+		err := h.rtspFlow(rtspURL)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-	time.Sleep(1 * time.Second)
+		time.Sleep(1 * time.Second)
 
-	h.rtpReaderFlow(ctx)
+		h.rtpReaderFlow(ctx)
+	}()
 }
 
 func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 	rtpCh := make(chan types.RTPPacket)
 	go h.client.RTPReader(ctx, rtpCh)
 
-	counter := &PacketCounter{}
+	h.pc = &PacketCounter{}
 
 	uiTicker := time.NewTicker(200 * time.Millisecond)
 
@@ -56,7 +59,7 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 					h.cancel()
 					return
 				}
-				h.IncrementCounter(rtpPacket, counter)
+				h.IncrementCounter(rtpPacket)
 				err := vp.Push(rtpPacket.Payload)
 				if err != nil {
 					// error
@@ -75,7 +78,7 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 				return
 			case <-uiTicker.C:
 				fyne.Do(func() {
-					h.UpdateCounter(counter)
+					h.UpdateCounter()
 				})
 			case <-ctx.Done():
 				return
@@ -155,7 +158,10 @@ func (h *Handlers) disconnect() {
 	if err != nil {
 		// Ошибка
 	}
-	h.ui.BtnOpen.SetText("CONNECT")
+
+	fyne.Do(func() {
+		h.ui.BtnOpen.SetText("CONNECT")
+	})
 
 	if !h.client.IsEmptyConnection() {
 		_ = h.client.Close()
@@ -175,30 +181,34 @@ func (h *Handlers) connect(rtspURL string) {
 	if err != nil {
 		// Ошибка
 	}
-	h.ui.BtnOpen.SetText("DISCONNECT")
+
+	fyne.Do(func() {
+		h.ui.BtnOpen.SetText("DISCONNECT")
+	})
 	h.isConnected = true
-	h.UpdateCounter(&PacketCounter{})
+	h.pc = &PacketCounter{}
+	h.UpdateCounter()
 }
 
-func (h *Handlers) IncrementCounter(packet types.RTPPacket, counter *PacketCounter) {
+func (h *Handlers) IncrementCounter(packet types.RTPPacket) {
 	switch packet.Type {
 	case types.RTPTypeAudio:
-		counter.Audio++
+		h.pc.Audio++
 	case types.RTPTypeVideo:
-		counter.Video++
+		h.pc.Video++
 	case types.RTCPTypeAudio:
-		counter.RTCPAudio++
+		h.pc.RTCPAudio++
 	case types.RTCPTypeVideo:
-		counter.RTCPVideo++
+		h.pc.RTCPVideo++
 	}
 }
 
-func (h *Handlers) UpdateCounter(counter *PacketCounter) {
-	h.ui.InfoLabels["Video"].SetText(fmt.Sprintf("%d", counter.Video))
-	h.ui.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", counter.Audio))
-	h.ui.InfoLabels["RTCPVideo"].SetText(fmt.Sprintf("%d", counter.RTCPVideo))
-	h.ui.InfoLabels["RTCPAudio"].SetText(fmt.Sprintf("%d", counter.RTCPAudio))
-	h.ui.InfoLabels["Packets"].SetText(fmt.Sprintf("%d", counter.Video+counter.Audio+counter.RTCPVideo+counter.RTCPAudio))
+func (h *Handlers) UpdateCounter() {
+	h.ui.InfoLabels["Video"].SetText(fmt.Sprintf("%d", h.pc.Video))
+	h.ui.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", h.pc.Audio))
+	h.ui.InfoLabels["RTCPVideo"].SetText(fmt.Sprintf("%d", h.pc.RTCPVideo))
+	h.ui.InfoLabels["RTCPAudio"].SetText(fmt.Sprintf("%d", h.pc.RTCPAudio))
+	h.ui.InfoLabels["Packets"].SetText(fmt.Sprintf("%d", h.pc.Video+h.pc.Audio+h.pc.RTCPVideo+h.pc.RTCPAudio))
 }
 
 func buildOutputString(headers textproto.MIMEHeader, body []byte) string {

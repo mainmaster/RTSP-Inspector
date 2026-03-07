@@ -58,8 +58,6 @@ func makeCenterContent(ui *Widgets) fyne.CanvasObject {
 func makeBottomPanel(ui *Widgets) fyne.CanvasObject {
 	return container.NewHBox(
 		layout.NewSpacer(),
-
-		ui.BtnDescribe,
 		layout.NewSpacer(),
 	)
 }
