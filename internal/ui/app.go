@@ -52,7 +52,7 @@ func makeCenterContent(ui *Widgets) fyne.CanvasObject {
 	leftStats := container.NewVScroll(ui.RTPForm)
 	rightStats := container.NewVScroll(ui.NALUForm)
 	bottomSplit := container.NewHSplit(leftStats, rightStats)
-	bottomSplit.Offset = 0.5
+	bottomSplit.Offset = 0.2
 	mainSplit := container.NewVSplit(top, bottomSplit)
 	mainSplit.Offset = 0.6
 

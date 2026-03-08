@@ -1,6 +1,8 @@
 package processor
 
 import (
+	"fmt"
+	"log"
 	"rtsp-inspector/internal/types"
 
 	"github.com/pion/rtp"
@@ -11,7 +13,7 @@ import (
 
 const (
 	videoSampleRate = 90000
-	maxLate         = 100
+	maxLate         = 500
 )
 
 type VideoProcessor struct {
@@ -109,6 +111,20 @@ func (v *VideoProcessor) processH265(data []byte) *types.FrameInfo {
 			t = types.H265_NALU_TRAIL_R
 		case naluType == 4:
 			t = types.H265_NALU_RASL_R
+		case naluType == 5:
+			break
+		case naluType == 6:
+			break
+		case naluType == 9:
+			break
+		case naluType == 10:
+			break
+		case naluType == 14:
+			break
+		case naluType == 30:
+			break
+		case naluType == 44:
+			break
 		case naluType >= 16 && naluType <= 19:
 			t = types.H265_NALU_IDR_W
 			isKeyNALU = true
@@ -136,12 +152,17 @@ func (v *VideoProcessor) processH265(data []byte) *types.FrameInfo {
 			t = types.H265_NALU_PREFIX_SEI
 		case naluType == 42:
 			t = types.H265_NALU_PREFIX_SEI
+		case naluType == 43:
+			break
+		case naluType == 56:
+			break
 		case naluType == 62:
 			t = types.H265_NALU_EOS
 		case naluType == 37:
 			t = types.H265_NALU_EOS
 		default:
 			t = types.NALU_UNKNOWN
+			log.Fatalf(fmt.Sprintf("%d", naluType))
 		}
 
 		info.NALUs = append(info.NALUs, t)

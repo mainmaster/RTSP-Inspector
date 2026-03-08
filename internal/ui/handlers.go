@@ -27,6 +27,12 @@ func (h *Handlers) HandleConnect() {
 		if !h.isConnected {
 			h.connect(rtspURL)
 		} else {
+
+			req, _ := h.client.NewRequest(types.MethodTeardown, rtspURL)
+			h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+			res, _ := h.client.Do(req)
+			h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
+
 			h.disconnect()
 			return
 		}
