@@ -1,8 +1,6 @@
 package processor
 
 import (
-	"fmt"
-	"log"
 	"rtsp-inspector/internal/types"
 
 	"github.com/pion/rtp"
@@ -13,7 +11,7 @@ import (
 
 const (
 	videoSampleRate = 90000
-	maxLate         = 500
+	maxLate         = 150
 )
 
 type VideoProcessor struct {
@@ -58,117 +56,33 @@ func (v *VideoProcessor) GetFrameInfo(frame *media.Sample) *types.FrameInfo {
 		return nil
 	}
 
+	info := &types.FrameInfo{Codec: v.codec, NALUs: make([]types.NALUType, 0)}
+
+	var lookup map[int]types.NALUInfo
+	var mask byte
+	var shift int
+
 	switch v.codec {
 	case types.H264:
-		return v.processH264(frame.Data)
+		lookup = types.H264TypeLookup
+		mask = 0x1F
+		shift = 0
 	case types.H265:
-		return v.processH265(frame.Data)
-	default:
-		return &types.FrameInfo{Codec: v.codec}
-	}
-}
-
-func (v *VideoProcessor) processH264(data []byte) *types.FrameInfo {
-	info := &types.FrameInfo{Codec: types.H264}
-
-	forEachNALU(data, func(naluByte byte, isFirst bool) {
-		naluType := int(naluByte & 0x1F)
-
-		var t types.NALUType
-		switch naluType {
-		case 1:
-			t = types.H264_NALU_NON_IDR
-		case 5:
-			t = types.H264_NALU_IDR
-			info.IsKey = true
-		case 6:
-			t = types.H264_NALU_SEI
-		case 7:
-			t = types.H264_NALU_SPS
-		case 8:
-			t = types.H264_NALU_PPS
-		default:
-			t = types.NALU_UNKNOWN
-		}
-		info.NALUs = append(info.NALUs, t)
-	})
-	return info
-}
-
-func (v *VideoProcessor) processH265(data []byte) *types.FrameInfo {
-	info := &types.FrameInfo{
-		Codec: types.H265,
-		NALUs: make([]types.NALUType, 0),
+		lookup = types.H265TypeLookup
+		mask = 0x3F
+		shift = 1
 	}
 
-	forEachNALU(data, func(naluByte byte, isFirst bool) {
-		naluType := int((naluByte >> 1) & 0x3F)
-		var t types.NALUType
-		isKeyNALU := false
+	forEachNALU(frame.Data, func(naluByte byte, isFirst bool) {
+		rawType := int((naluByte >> shift) & mask)
 
-		switch {
-		case naluType == 1:
-			t = types.H265_NALU_TRAIL_R
-		case naluType == 4:
-			t = types.H265_NALU_RASL_R
-		case naluType == 5:
-			break
-		case naluType == 6:
-			break
-		case naluType == 9:
-			break
-		case naluType == 10:
-			break
-		case naluType == 14:
-			break
-		case naluType == 30:
-			break
-		case naluType == 44:
-			break
-		case naluType >= 16 && naluType <= 19:
-			t = types.H265_NALU_IDR_W
-			isKeyNALU = true
-		case naluType == 20:
-			t = types.H265_NALU_IDR_N
-			isKeyNALU = true
-		case naluType == 21:
-			t = types.H265_NALU_CRA
-			isKeyNALU = true
-		case naluType == 23:
-			t = types.H265_NALU_IDR_W_RADL
-			isKeyNALU = true
-		case naluType == 24:
-			t = types.H265_NALU_IDR_W_RADL
-			isKeyNALU = true
-		case naluType == 32:
-			t = types.H265_NALU_VPS
-		case naluType == 33:
-			t = types.H265_NALU_SPS
-		case naluType == 34:
-			t = types.H265_NALU_PPS
-		case naluType == 35:
-			t = types.H265_NALU_AUD
-		case naluType == 39:
-			t = types.H265_NALU_PREFIX_SEI
-		case naluType == 42:
-			t = types.H265_NALU_PREFIX_SEI
-		case naluType == 43:
-			break
-		case naluType == 56:
-			break
-		case naluType == 62:
-			t = types.H265_NALU_EOS
-		case naluType == 37:
-			t = types.H265_NALU_EOS
-		default:
-			t = types.NALU_UNKNOWN
-			log.Fatalf(fmt.Sprintf("%d", naluType))
-		}
-
-		info.NALUs = append(info.NALUs, t)
-
-		if isKeyNALU {
-			info.IsKey = true
+		if meta, ok := lookup[rawType]; ok {
+			info.NALUs = append(info.NALUs, meta.Type)
+			if meta.IsKey {
+				info.IsKey = true
+			}
+		} else {
+			info.NALUs = append(info.NALUs, types.NALU_UNKNOWN)
 		}
 	})
 
