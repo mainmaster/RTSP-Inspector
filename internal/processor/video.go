@@ -107,6 +107,8 @@ func (v *VideoProcessor) processH265(data []byte) *types.FrameInfo {
 		switch {
 		case naluType == 1:
 			t = types.H265_NALU_TRAIL_R
+		case naluType == 4:
+			t = types.H265_NALU_RASL_R
 		case naluType >= 16 && naluType <= 19:
 			t = types.H265_NALU_IDR_W
 			isKeyNALU = true
@@ -124,6 +126,12 @@ func (v *VideoProcessor) processH265(data []byte) *types.FrameInfo {
 			t = types.H265_NALU_PPS
 		case naluType == 39:
 			t = types.H265_NALU_PREFIX_SEI
+		case naluType == 42:
+			t = types.H265_NALU_PREFIX_SEI
+		case naluType == 62:
+			t = types.H265_NALU_EOS
+		case naluType == 37:
+			t = types.H265_NALU_EOS
 		default:
 			t = types.NALU_UNKNOWN
 		}

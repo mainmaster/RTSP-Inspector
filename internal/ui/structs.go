@@ -4,6 +4,7 @@ import (
 	"context"
 	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/internal/types"
+	"sync"
 )
 
 type Handlers struct {
@@ -14,6 +15,7 @@ type Handlers struct {
 	codecs      map[string]types.CodecType
 	pc          *PacketCounter
 	naluCounter map[types.NALUType]int
+	mu          sync.Mutex
 }
 
 type PacketCounter struct {

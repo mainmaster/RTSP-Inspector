@@ -50,6 +50,10 @@ const (
 	H265_NALU_SPS        // SPS
 	H265_NALU_PPS        // PPS
 	H265_NALU_PREFIX_SEI // Prefix SEI
+	H265_NALU_EOS        // End of stream
+	H265_NALU_SUFFIX_SEI //Suffix SEI
+	H265_NALU_RASL_R     // RASL_R (Leading Frame)
+	H265_NALU_RSV_NVCL42 // Reserved Non-VCL (Type 42)
 )
 
 var NALUNames = map[NALUType]string{
@@ -70,7 +74,11 @@ var NALUNames = map[NALUType]string{
 	H265_NALU_VPS:        "VPS (Video)",
 	H265_NALU_SPS:        "SPS (Sequence)",
 	H265_NALU_PPS:        "PPS (Picture)",
-	H265_NALU_PREFIX_SEI: "SEI Metadata",
+	H265_NALU_PREFIX_SEI: "Prefix SEI Metadata",
+	H265_NALU_SUFFIX_SEI: "Suffix SEI (Post-Metadata)",
+	H265_NALU_EOS:        "EOS (End of stream)",
+	H265_NALU_RASL_R:     "RASL_R (Leading Frame)",
+	H265_NALU_RSV_NVCL42: "Reserved Non-VCL (Type 42)",
 }
 
 type FrameInfo struct {

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"rtsp-inspector/internal/rtsp_client"
+	"sync"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -15,7 +16,11 @@ func StartApp() {
 
 	ui := NewUIWidgets()
 	client := &rtsp_client.Client{}
-	h := &Handlers{ui: ui, client: client}
+	h := &Handlers{
+		ui:     ui,
+		client: client,
+		mu:     sync.Mutex{},
+	}
 
 	ui.BtnOpen.OnTapped = h.HandleConnect
 

@@ -36,7 +36,7 @@ func (h *Handlers) HandleConnect() {
 			fmt.Println(err)
 		}
 
-		//time.Sleep(1 * time.Second)
+		time.Sleep(1 * time.Second)
 
 		h.rtpReaderFlow(ctx)
 	}()
@@ -51,8 +51,21 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 	uiTicker := time.NewTicker(200 * time.Millisecond)
 
 	vp := processor.NewVideoProcessor(h.codecs["video"])
+
 	go func() {
 		defer uiTicker.Stop()
+		for {
+			select {
+			case <-uiTicker.C:
+				h.updateNTPCounter()
+				h.updateNALUCounter()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	go func() {
 		for {
 			select {
 			case rtpPacket, ok := <-rtpCh:
@@ -68,7 +81,7 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 				}
 				frame := vp.Pop()
 				if frame == nil {
-					break
+					continue
 				}
 				info := vp.GetFrameInfo(frame)
 				if info != nil {
@@ -77,9 +90,6 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 			case <-time.After(time.Second * 5):
 				h.cancel()
 				return
-			case <-uiTicker.C:
-				go h.updateNTPCounter()
-				go h.updateNALUCounter()
 			case <-ctx.Done():
 				return
 			}
@@ -188,11 +198,14 @@ func (h *Handlers) connect(rtspURL string) {
 	h.isConnected = true
 	h.pc = &PacketCounter{}
 	h.naluCounter = map[types.NALUType]int{}
-	go h.updateNTPCounter()
-	go h.updateNALUCounter()
+	h.updateNTPCounter()
+	h.updateNALUCounter()
 }
 
 func (h *Handlers) incrementCounter(packet types.RTPPacket) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	switch packet.Type {
 	case types.RTPTypeAudio:
 		h.pc.Audio++
@@ -206,42 +219,57 @@ func (h *Handlers) incrementCounter(packet types.RTPPacket) {
 }
 
 func (h *Handlers) updateNTPCounter() {
+	h.mu.Lock()
+	v, a, rv, ra := h.pc.Video, h.pc.Audio, h.pc.RTCPVideo, h.pc.RTCPAudio
+	h.mu.Unlock()
+
 	fyne.Do(func() {
-		h.ui.InfoLabels["Video"].SetText(fmt.Sprintf("%d", h.pc.Video))
-		h.ui.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", h.pc.Audio))
-		h.ui.InfoLabels["RTCPVideo"].SetText(fmt.Sprintf("%d", h.pc.RTCPVideo))
-		h.ui.InfoLabels["RTCPAudio"].SetText(fmt.Sprintf("%d", h.pc.RTCPAudio))
-		h.ui.InfoLabels["Packets"].SetText(fmt.Sprintf("%d", h.pc.Video+h.pc.Audio+h.pc.RTCPVideo+h.pc.RTCPAudio))
+		h.ui.InfoLabels["Video"].SetText(fmt.Sprintf("%d", v))
+		h.ui.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", a))
+		h.ui.InfoLabels["RTCPVideo"].SetText(fmt.Sprintf("%d", rv))
+		h.ui.InfoLabels["RTCPAudio"].SetText(fmt.Sprintf("%d", ra))
+		h.ui.InfoLabels["Packets"].SetText(fmt.Sprintf("%d", v+a+rv+ra))
+		h.ui.StatsForm.Refresh()
 	})
 }
 
 func (h *Handlers) incrementNALUCounter(nalus []types.NALUType) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	for _, n := range nalus {
 		h.naluCounter[n]++
 	}
 }
 
 func (h *Handlers) updateNALUCounter() {
-	for nalu, count := range h.naluCounter {
-		if _, lux := h.ui.NALULabels[nalu]; !lux {
-			name := types.NALUNames[nalu]
-			if name == "" {
-				continue
-			}
-
-			newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
-			h.ui.NALULabels[nalu] = newLabel
-			fyne.Do(func() {
-				h.ui.NALUForm.Append(name, newLabel)
-			})
-		}
-
-		// Обновляем значение
-		fyne.Do(func() {
-			h.ui.NALULabels[nalu].SetText(fmt.Sprintf("%d", count))
-		})
+	h.mu.Lock()
+	snapshot := make(map[types.NALUType]int)
+	for k, v := range h.naluCounter {
+		snapshot[k] = v
 	}
+	h.mu.Unlock()
 
+	fyne.Do(func() {
+		newElementAdded := false
+		for nalu, count := range snapshot {
+			if _, lux := h.ui.NALULabels[nalu]; !lux {
+				name := types.NALUNames[nalu]
+				if name == "" {
+					continue
+				}
+
+				newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
+				h.ui.NALULabels[nalu] = newLabel
+				h.ui.NALUForm.Append(name, newLabel)
+				newElementAdded = true
+			}
+			h.ui.NALULabels[nalu].SetText(fmt.Sprintf("%d", count))
+		}
+		if newElementAdded {
+			h.ui.NALUForm.Refresh()
+		}
+	})
 }
 
 func buildOutputString(headers textproto.MIMEHeader, body []byte) string {
