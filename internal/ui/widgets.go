@@ -13,8 +13,8 @@ import (
 type Widgets struct {
 	URLEntry     *widget.Entry
 	BtnOpen      *widget.Button
-	StatsForm    *widget.Form
-	InfoLabels   map[string]*widget.Label
+	RTPForm      *widget.Form
+	RTPLabels    map[types.RTPType]*widget.Label
 	NALULabels   map[types.NALUType]*widget.Label
 	NALUForm     *widget.Form
 	LogAccordion *widget.Accordion // Вместо LogOutput
@@ -36,14 +36,6 @@ func NewUIWidgets() *Widgets {
 	log.Wrapping = fyne.TextWrapOff
 
 	statsForm := widget.NewForm()
-	infoLabels := make(map[string]*widget.Label)
-	keys := []string{"Packets", "Video", "Audio", "RTCPVideo", "RTCPAudio"}
-	for _, k := range keys {
-		lbl := widget.NewLabel("0")
-		infoLabels[k] = lbl
-		statsForm.Append(k, lbl)
-	}
-
 	naluForm := widget.NewForm()
 
 	accordion := widget.NewAccordion()
@@ -54,8 +46,8 @@ func NewUIWidgets() *Widgets {
 		LogAccordion: accordion,
 		LogScroll:    container.NewScroll(accordion),
 		BtnOpen:      widget.NewButton("CONNECT", nil),
-		StatsForm:    statsForm,
-		InfoLabels:   infoLabels,
+		RTPForm:      statsForm,
+		RTPLabels:    make(map[types.RTPType]*widget.Label),
 		NALULabels:   make(map[types.NALUType]*widget.Label),
 		NALUForm:     naluForm,
 	}

@@ -1,8 +1,8 @@
 package ui
 
 import (
+	"rtsp-inspector/internal/processor"
 	"rtsp-inspector/internal/rtsp_client"
-	"sync"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -19,7 +19,7 @@ func StartApp() {
 	h := &Handlers{
 		ui:     ui,
 		client: client,
-		mu:     sync.Mutex{},
+		si:     processor.NewStreamInspector(),
 	}
 
 	ui.BtnOpen.OnTapped = h.HandleConnect
@@ -49,7 +49,7 @@ func makeTopPanel(ui *Widgets) fyne.CanvasObject {
 
 func makeCenterContent(ui *Widgets) fyne.CanvasObject {
 	top := ui.LogScroll
-	leftStats := container.NewVScroll(ui.StatsForm)
+	leftStats := container.NewVScroll(ui.RTPForm)
 	rightStats := container.NewVScroll(ui.NALUForm)
 	bottomSplit := container.NewHSplit(leftStats, rightStats)
 	bottomSplit.Offset = 0.5

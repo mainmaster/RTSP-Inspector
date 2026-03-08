@@ -20,6 +20,13 @@ const (
 	RTCPTypeAudio
 )
 
+var RTPTypeNames = map[RTPType]string{
+	RTPTypeVideo:  "Video",
+	RTCPTypeVideo: "RTCP Video",
+	RTPTypeAudio:  "Audio",
+	RTCPTypeAudio: "RTCP Audio",
+}
+
 type RTPPacket struct {
 	Payload []byte
 	Type    RTPType
@@ -54,17 +61,21 @@ const (
 	H265_NALU_SUFFIX_SEI //Suffix SEI
 	H265_NALU_RASL_R     // RASL_R (Leading Frame)
 	H265_NALU_RSV_NVCL42 // Reserved Non-VCL (Type 42)
+	H265_NALU_IDR_N_LP   // IDR_N_LP (Pure Keyframe)
+	H265_NALU_IDR_W_RADL // IDR_W_RADL (Keyframe + Leading)
+	H265_NALU_AUD        // AUD (Access Unit Delimiter)",
 )
 
 var NALUNames = map[NALUType]string{
 	NALU_UNKNOWN: "UNKNOWN",
 
 	// H.264 (AVC)
-	H264_NALU_NON_IDR: "P/B-Frame (Delta)",
-	H264_NALU_IDR:     "IDR Frame (Keyframe)",
-	H264_NALU_SPS:     "SPS (Sequence)",
-	H264_NALU_PPS:     "PPS (Picture)",
-	H264_NALU_SEI:     "SEI Metadata",
+	H265_NALU_IDR_N_LP: "IDR_N_LP (Pure Keyframe)",
+	H264_NALU_NON_IDR:  "P/B-Frame (Delta)",
+	H264_NALU_IDR:      "IDR Frame (Keyframe)",
+	H264_NALU_SPS:      "SPS (Sequence)",
+	H264_NALU_PPS:      "PPS (Picture)",
+	H264_NALU_SEI:      "SEI Metadata",
 
 	// H.265 (HEVC)
 	H265_NALU_TRAIL_R:    "P/B-Frame (Trailing)",
@@ -79,6 +90,8 @@ var NALUNames = map[NALUType]string{
 	H265_NALU_EOS:        "EOS (End of stream)",
 	H265_NALU_RASL_R:     "RASL_R (Leading Frame)",
 	H265_NALU_RSV_NVCL42: "Reserved Non-VCL (Type 42)",
+	H265_NALU_IDR_W_RADL: "IDR_W_RADL (Keyframe + Leading)",
+	H265_NALU_AUD:        "AUD (Access Unit Delimiter)",
 }
 
 type FrameInfo struct {

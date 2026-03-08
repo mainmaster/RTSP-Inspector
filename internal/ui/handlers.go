@@ -46,8 +46,6 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 	rtpCh := make(chan types.RTPPacket)
 	go h.client.RTPReader(ctx, rtpCh)
 
-	h.pc = &PacketCounter{}
-
 	uiTicker := time.NewTicker(200 * time.Millisecond)
 
 	vp := processor.NewVideoProcessor(h.codecs["video"])
@@ -57,7 +55,7 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 		for {
 			select {
 			case <-uiTicker.C:
-				h.updateNTPCounter()
+				h.updateRTPCounter()
 				h.updateNALUCounter()
 			case <-ctx.Done():
 				return
@@ -73,19 +71,21 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 					h.cancel()
 					return
 				}
-				h.incrementCounter(rtpPacket)
+				h.si.IncrementRTPCounter(&rtpPacket)
 				err := vp.Push(rtpPacket.Payload)
 				if err != nil {
 					// error
 					h.cancel()
 				}
-				frame := vp.Pop()
-				if frame == nil {
-					continue
-				}
-				info := vp.GetFrameInfo(frame)
-				if info != nil {
-					h.incrementNALUCounter(info.NALUs)
+				for {
+					frame := vp.Pop()
+					if frame == nil {
+						break
+					}
+					info := vp.GetFrameInfo(frame)
+					if info != nil {
+						h.si.IncrementNALUCounter(info.NALUs)
+					}
 				}
 			case <-time.After(time.Second * 5):
 				h.cancel()
@@ -196,63 +196,59 @@ func (h *Handlers) connect(rtspURL string) {
 		h.ui.BtnOpen.SetText("DISCONNECT")
 	})
 	h.isConnected = true
-	h.pc = &PacketCounter{}
-	h.naluCounter = map[types.NALUType]int{}
-	h.updateNTPCounter()
-	h.updateNALUCounter()
-}
 
-func (h *Handlers) incrementCounter(packet types.RTPPacket) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.si.Clear()
 
-	switch packet.Type {
-	case types.RTPTypeAudio:
-		h.pc.Audio++
-	case types.RTPTypeVideo:
-		h.pc.Video++
-	case types.RTCPTypeAudio:
-		h.pc.RTCPAudio++
-	case types.RTCPTypeVideo:
-		h.pc.RTCPVideo++
-	}
-}
-
-func (h *Handlers) updateNTPCounter() {
-	h.mu.Lock()
-	v, a, rv, ra := h.pc.Video, h.pc.Audio, h.pc.RTCPVideo, h.pc.RTCPAudio
-	h.mu.Unlock()
+	h.ui.RTPLabels = make(map[types.RTPType]*widget.Label)
+	h.ui.NALULabels = make(map[types.NALUType]*widget.Label)
 
 	fyne.Do(func() {
-		h.ui.InfoLabels["Video"].SetText(fmt.Sprintf("%d", v))
-		h.ui.InfoLabels["Audio"].SetText(fmt.Sprintf("%d", a))
-		h.ui.InfoLabels["RTCPVideo"].SetText(fmt.Sprintf("%d", rv))
-		h.ui.InfoLabels["RTCPAudio"].SetText(fmt.Sprintf("%d", ra))
-		h.ui.InfoLabels["Packets"].SetText(fmt.Sprintf("%d", v+a+rv+ra))
-		h.ui.StatsForm.Refresh()
+		h.ui.RTPForm.Items = nil
+		h.ui.RTPForm.Refresh()
+
+		h.ui.NALUForm.Items = nil
+		h.ui.NALUForm.Refresh()
 	})
 }
 
-func (h *Handlers) incrementNALUCounter(nalus []types.NALUType) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	for _, n := range nalus {
-		h.naluCounter[n]++
-	}
-}
-
-func (h *Handlers) updateNALUCounter() {
-	h.mu.Lock()
-	snapshot := make(map[types.NALUType]int)
-	for k, v := range h.naluCounter {
-		snapshot[k] = v
-	}
-	h.mu.Unlock()
+func (h *Handlers) updateRTPCounter() {
+	counter := h.si.GetRTPCounter()
 
 	fyne.Do(func() {
 		newElementAdded := false
-		for nalu, count := range snapshot {
+
+		if len(h.ui.RTPLabels) == 0 && len(h.ui.RTPForm.Items) > 0 {
+			h.ui.RTPForm.Items = nil
+		}
+
+		for rtp, count := range counter {
+			if _, lux := h.ui.RTPLabels[rtp]; !lux {
+				name := types.RTPTypeNames[rtp]
+				if name == "" {
+					continue
+				}
+
+				newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
+				h.ui.RTPLabels[rtp] = newLabel
+				h.ui.RTPForm.Append(name, newLabel)
+				newElementAdded = true
+			}
+			h.ui.RTPLabels[rtp].SetText(fmt.Sprintf("%d", count))
+		}
+		if newElementAdded {
+			h.ui.RTPForm.Refresh()
+			h.ui.LogScroll.Refresh()
+		}
+	})
+}
+
+func (h *Handlers) updateNALUCounter() {
+	counter := h.si.GetNALUCounter()
+
+	fyne.Do(func() {
+		newElementAdded := false
+
+		for nalu, count := range counter {
 			if _, lux := h.ui.NALULabels[nalu]; !lux {
 				name := types.NALUNames[nalu]
 				if name == "" {
@@ -268,6 +264,7 @@ func (h *Handlers) updateNALUCounter() {
 		}
 		if newElementAdded {
 			h.ui.NALUForm.Refresh()
+			h.ui.LogScroll.Refresh()
 		}
 	})
 }

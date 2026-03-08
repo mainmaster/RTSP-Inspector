@@ -11,7 +11,7 @@ import (
 
 const (
 	videoSampleRate = 90000
-	maxLate         = 50
+	maxLate         = 100
 )
 
 type VideoProcessor struct {
@@ -42,13 +42,13 @@ func (v *VideoProcessor) Push(payload []byte) error {
 	if err != nil {
 		return err
 	}
+
 	v.sb.Push(rtpPkt)
 	return nil
 }
 
 func (v *VideoProcessor) Pop() *media.Sample {
-	sample := v.sb.Pop()
-	return sample
+	return v.sb.Pop()
 }
 
 func (v *VideoProcessor) GetFrameInfo(frame *media.Sample) *types.FrameInfo {
@@ -118,12 +118,20 @@ func (v *VideoProcessor) processH265(data []byte) *types.FrameInfo {
 		case naluType == 21:
 			t = types.H265_NALU_CRA
 			isKeyNALU = true
+		case naluType == 23:
+			t = types.H265_NALU_IDR_W_RADL
+			isKeyNALU = true
+		case naluType == 24:
+			t = types.H265_NALU_IDR_W_RADL
+			isKeyNALU = true
 		case naluType == 32:
 			t = types.H265_NALU_VPS
 		case naluType == 33:
 			t = types.H265_NALU_SPS
 		case naluType == 34:
 			t = types.H265_NALU_PPS
+		case naluType == 35:
+			t = types.H265_NALU_AUD
 		case naluType == 39:
 			t = types.H265_NALU_PREFIX_SEI
 		case naluType == 42:

@@ -2,9 +2,9 @@ package ui
 
 import (
 	"context"
+	"rtsp-inspector/internal/processor"
 	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/internal/types"
-	"sync"
 )
 
 type Handlers struct {
@@ -13,14 +13,5 @@ type Handlers struct {
 	cancel      context.CancelFunc
 	isConnected bool
 	codecs      map[string]types.CodecType
-	pc          *PacketCounter
-	naluCounter map[types.NALUType]int
-	mu          sync.Mutex
-}
-
-type PacketCounter struct {
-	Video     int
-	Audio     int
-	RTCPVideo int
-	RTCPAudio int
+	si          *processor.StreamInspector
 }
