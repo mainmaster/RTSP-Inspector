@@ -53,20 +53,24 @@ const (
 )
 
 var NALUNames = map[NALUType]string{
-	NALU_UNKNOWN:         "UNKNOWN",
-	H264_NALU_NON_IDR:    "Non-IDR (P/B-Frame)",
-	H264_NALU_IDR:        "IDR",
-	H264_NALU_SPS:        "SPS",
-	H264_NALU_PPS:        "PPS",
-	H264_NALU_SEI:        "SEI",
-	H265_NALU_TRAIL_R:    "TRAIL_R (P/B-Frame)",
-	H265_NALU_IDR_W:      "IDR_W",
-	H265_NALU_IDR_N:      "IDR_N",
-	H265_NALU_CRA:        "CRA",
-	H265_NALU_VPS:        "VPS",
-	H265_NALU_SPS:        "SPS",
-	H265_NALU_PPS:        "PPS",
-	H265_NALU_PREFIX_SEI: "PREFIX_SEI",
+	NALU_UNKNOWN: "UNKNOWN",
+
+	// H.264 (AVC)
+	H264_NALU_NON_IDR: "P/B-Frame (Delta)",
+	H264_NALU_IDR:     "IDR Frame (Keyframe)",
+	H264_NALU_SPS:     "SPS (Sequence)",
+	H264_NALU_PPS:     "PPS (Picture)",
+	H264_NALU_SEI:     "SEI Metadata",
+
+	// H.265 (HEVC)
+	H265_NALU_TRAIL_R:    "P/B-Frame (Trailing)",
+	H265_NALU_IDR_W:      "IDR_W (Keyframe)",
+	H265_NALU_IDR_N:      "IDR_N (Keyframe)",
+	H265_NALU_CRA:        "CRA (Clean Access)",
+	H265_NALU_VPS:        "VPS (Video)",
+	H265_NALU_SPS:        "SPS (Sequence)",
+	H265_NALU_PPS:        "PPS (Picture)",
+	H265_NALU_PREFIX_SEI: "SEI Metadata",
 }
 
 type FrameInfo struct {

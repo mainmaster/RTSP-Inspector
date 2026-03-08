@@ -36,7 +36,7 @@ func (h *Handlers) HandleConnect() {
 			fmt.Println(err)
 		}
 
-		time.Sleep(1 * time.Second)
+		//time.Sleep(1 * time.Second)
 
 		h.rtpReaderFlow(ctx)
 	}()
@@ -78,8 +78,8 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 				h.cancel()
 				return
 			case <-uiTicker.C:
-				h.updateNTPCounter()
-				h.updateNaluCounter()
+				go h.updateNTPCounter()
+				go h.updateNALUCounter()
 			case <-ctx.Done():
 				return
 			}
@@ -88,7 +88,7 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 }
 
 func (h *Handlers) rtspFlow(rtspURL string) error {
-	req, err := h.client.NewRequest("OPTIONS", rtspURL)
+	req, err := h.client.NewRequest(types.MethodOptions, rtspURL)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (h *Handlers) rtspFlow(rtspURL string) error {
 	}
 	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
 
-	req, err = h.client.NewRequest("DESCRIBE", rtspURL)
+	req, err = h.client.NewRequest(types.MethodDescribe, rtspURL)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (h *Handlers) rtspFlow(rtspURL string) error {
 
 	sessionIDs := make(map[string]struct{})
 	for _, t := range describeRes.GetTrackIDs() {
-		req, err = h.client.NewRequest("SETUP", rtspURL)
+		req, err = h.client.NewRequest(types.MethodSetup, rtspURL)
 		if err != nil {
 			return err
 		}
@@ -134,7 +134,7 @@ func (h *Handlers) rtspFlow(rtspURL string) error {
 	}
 
 	for sessionID, _ := range sessionIDs {
-		req, err = h.client.NewRequest("PLAY", rtspURL)
+		req, err = h.client.NewRequest(types.MethodPlay, rtspURL)
 		if err != nil {
 			return err
 		}
@@ -188,7 +188,8 @@ func (h *Handlers) connect(rtspURL string) {
 	h.isConnected = true
 	h.pc = &PacketCounter{}
 	h.naluCounter = map[types.NALUType]int{}
-	h.updateNTPCounter()
+	go h.updateNTPCounter()
+	go h.updateNALUCounter()
 }
 
 func (h *Handlers) incrementCounter(packet types.RTPPacket) {
@@ -220,24 +221,27 @@ func (h *Handlers) incrementNALUCounter(nalus []types.NALUType) {
 	}
 }
 
-func (h *Handlers) updateNaluCounter() {
-	fyne.Do(func() {
-		for nalu, count := range h.naluCounter {
-			if _, lux := h.ui.NALULabels[nalu]; !lux {
-				name := types.NALUNames[nalu]
-				if name == "" {
-					continue
-				}
-
-				newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
-				h.ui.NALULabels[nalu] = newLabel
-				h.ui.StatsForm.Append(name, newLabel)
+func (h *Handlers) updateNALUCounter() {
+	for nalu, count := range h.naluCounter {
+		if _, lux := h.ui.NALULabels[nalu]; !lux {
+			name := types.NALUNames[nalu]
+			if name == "" {
+				continue
 			}
 
-			// Обновляем значение
-			h.ui.NALULabels[nalu].SetText(fmt.Sprintf("%d", count))
+			newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
+			h.ui.NALULabels[nalu] = newLabel
+			fyne.Do(func() {
+				h.ui.NALUForm.Append(name, newLabel)
+			})
 		}
-	})
+
+		// Обновляем значение
+		fyne.Do(func() {
+			h.ui.NALULabels[nalu].SetText(fmt.Sprintf("%d", count))
+		})
+	}
+
 }
 
 func buildOutputString(headers textproto.MIMEHeader, body []byte) string {

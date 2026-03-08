@@ -16,6 +16,7 @@ type Widgets struct {
 	StatsForm    *widget.Form
 	InfoLabels   map[string]*widget.Label
 	NALULabels   map[types.NALUType]*widget.Label
+	NALUForm     *widget.Form
 	LogAccordion *widget.Accordion // Вместо LogOutput
 	LogScroll    *container.Scroll
 }
@@ -43,6 +44,8 @@ func NewUIWidgets() *Widgets {
 		statsForm.Append(k, lbl)
 	}
 
+	naluForm := widget.NewForm()
+
 	accordion := widget.NewAccordion()
 	accordion.MultiOpen = true
 
@@ -54,6 +57,7 @@ func NewUIWidgets() *Widgets {
 		StatsForm:    statsForm,
 		InfoLabels:   infoLabels,
 		NALULabels:   make(map[types.NALUType]*widget.Label),
+		NALUForm:     naluForm,
 	}
 }
 
