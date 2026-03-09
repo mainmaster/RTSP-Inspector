@@ -8,6 +8,8 @@ import (
 )
 
 type Handlers struct {
+	rtspURL     string
+	sessions    map[string]struct{}
 	ui          *Widgets
 	client      *rtsp_client.Client
 	cancel      context.CancelFunc

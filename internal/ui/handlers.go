@@ -16,29 +16,34 @@ import (
 )
 
 func (h *Handlers) HandleConnect() {
-	rtspURL := h.ui.URLEntry.Text
-	if rtspURL == "" {
+	if h.ui.URLEntry.Text == "" {
 		return
 	}
+	h.rtspURL = h.ui.URLEntry.Text
 
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
 
 	go func() {
 		if !h.isConnected {
-			h.connect(rtspURL)
+			h.connect(h.rtspURL)
 		} else {
-			/*
-				req, _ := h.client.NewRequest(types.MethodTeardown, rtspURL)
+			for s, _ := range h.sessions {
+				req, _ := h.client.NewRequest(types.MethodTeardown, h.rtspURL)
+				req.SetSessionID(s)
 				h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
-				res, _ := h.client.Do(req)
-				h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
-			*/
+				h.client.Send(req)
+			}
+
 			h.disconnect()
+			fyne.Do(func() {
+				h.ui.BtnOpen.SetText("CONNECT")
+			})
+			clear(h.sessions)
 			return
 		}
 
-		err := h.rtspFlow(rtspURL)
+		err := h.rtspFlow(h.rtspURL)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -76,19 +81,25 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 		}
 	}()
 
+	rtspKeepaliveTicker := time.NewTicker(10 * time.Second)
+
 	go func() {
+		defer h.cancel()
 		for {
 			select {
+			case rtspPacket, ok := <-rtspCh:
+				if !ok {
+					return
+				}
+				fmt.Println(rtspPacket)
 			case rtpPacket, ok := <-rtpCh:
 				if !ok {
-					h.cancel()
 					return
 				}
 				h.si.IncrementRTPCounter(&rtpPacket)
 				err := vp.Push(rtpPacket.Payload)
 				if err != nil {
-					// error
-					h.cancel()
+					return
 				}
 				for {
 					frame := vp.Pop()
@@ -101,8 +112,14 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 					}
 				}
 			case <-time.After(time.Second * 5):
-				h.cancel()
 				return
+			case <-rtspKeepaliveTicker.C:
+				req, _ := h.client.NewRequest(types.MethodOptions, h.rtspURL)
+				h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+				err := h.client.Send(req)
+				if err != nil {
+					return
+				}
 			case <-ctx.Done():
 				return
 			}
@@ -140,7 +157,6 @@ func (h *Handlers) rtspFlow(rtspURL string) error {
 	h.codecs = codecs
 	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, describeRes.Body), false)
 
-	sessionIDs := make(map[string]struct{})
 	for _, t := range describeRes.GetTrackIDs() {
 		req, err = h.client.NewRequest(types.MethodSetup, rtspURL)
 		if err != nil {
@@ -153,10 +169,10 @@ func (h *Handlers) rtspFlow(rtspURL string) error {
 			return setupErr
 		}
 		h.ui.AddLogEntry(req.Method, buildOutputString(setupRes.Header, setupRes.Body), false)
-		sessionIDs[res.GetSessionID()] = struct{}{}
+		h.sessions[setupRes.GetSessionID()] = struct{}{}
 	}
 
-	for sessionID, _ := range sessionIDs {
+	for sessionID, _ := range h.sessions {
 		req, err = h.client.NewRequest(types.MethodPlay, rtspURL)
 		if err != nil {
 			return err
@@ -181,10 +197,6 @@ func (h *Handlers) disconnect() {
 	if err != nil {
 		// Ошибка
 	}
-
-	fyne.Do(func() {
-		h.ui.BtnOpen.SetText("CONNECT")
-	})
 
 	if !h.client.IsEmptyConnection() {
 		_ = h.client.Close()

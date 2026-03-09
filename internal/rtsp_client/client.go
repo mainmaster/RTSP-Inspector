@@ -16,33 +16,35 @@ import (
 )
 
 type Client struct {
-	conn        net.Conn
-	Reader      *bufio.Reader
-	tp          *textproto.Reader
-	csec        int
-	sessionID   string
-	digestAuth  auth.DigestAuth
-	Credentials Credentials
+	conn       net.Conn
+	reader     *bufio.Reader
+	tp         *textproto.Reader
+	csec       int
+	digestAuth auth.DigestAuth
 }
 
 func (c *Client) Do(req *Request) (*RTSPResponse, error) {
 	if c.conn == nil {
 		return nil, errors.New("no connection")
 	}
-	return c.Send(req.BuildRequest())
+	err := c.Send(req)
+	if err != nil {
+		return nil, err
+	}
+	return c.readResponse()
 }
 
-// TODO - разделить запрос и ответ на методы (Send и readResponse)
-
-func (c *Client) Send(payload string) (*RTSPResponse, error) {
+func (c *Client) Send(req *Request) error {
 	defer func() {
 		c.csec++
 	}()
-
-	if _, err := c.conn.Write([]byte(payload)); err != nil {
-		return nil, err
+	if _, err := c.conn.Write([]byte(req.BuildRequest())); err != nil {
+		return err
 	}
+	return nil
+}
 
+func (c *Client) readResponse() (*RTSPResponse, error) {
 	h, err := c.readRTSPHeaders()
 	if err != nil {
 		return nil, err
@@ -100,7 +102,7 @@ func (c *Client) readRTSPBody(headers textproto.MIMEHeader) ([]byte, error) {
 	}
 
 	body := make([]byte, size)
-	_, err = io.ReadFull(c.Reader, body)
+	_, err = io.ReadFull(c.reader, body)
 	if err != nil {
 		return nil, err
 	}
@@ -121,27 +123,27 @@ func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtsp
 		default:
 		}
 
-		peek, err := c.Reader.Peek(1)
+		peek, err := c.reader.Peek(1)
 		if err != nil {
 			return err // EOF
 		}
 
 		switch peek[0] {
 		case '$': // RTP
-			_, err = c.Reader.Discard(1)
+			_, err = c.reader.Discard(1)
 			if err != nil {
 				return err
 			}
-			channelByte, _ := c.Reader.ReadByte()
+			channelByte, _ := c.reader.ReadByte()
 			channel := types.RTPType(channelByte)
 
 			lenBuf := make([]byte, 2)
-			if _, err = io.ReadFull(c.Reader, lenBuf); err != nil {
+			if _, err = io.ReadFull(c.reader, lenBuf); err != nil {
 				return err
 			}
 			length := binary.BigEndian.Uint16(lenBuf)
 			payload := make([]byte, length)
-			if _, err = io.ReadFull(c.Reader, payload); err != nil {
+			if _, err = io.ReadFull(c.reader, payload); err != nil {
 				return err
 			}
 
@@ -180,8 +182,8 @@ func (c *Client) Connect(u url.URL) error {
 		return err
 	}
 	c.conn = conn
-	c.Reader = bufio.NewReader(conn)
-	c.tp = textproto.NewReader(c.Reader)
+	c.reader = bufio.NewReader(conn)
+	c.tp = textproto.NewReader(c.reader)
 
 	c.setCredentialsFromURL(u)
 

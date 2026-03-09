@@ -54,8 +54,10 @@ func NewUIWidgets() *Widgets {
 }
 
 func (ui *Widgets) AddLogEntry(title types.RTSPMethod, body string, isRequest bool) {
-	content := widget.NewLabel(body)
+	content := widget.NewMultiLineEntry()
+	content.SetText(body)
 	content.Wrapping = fyne.TextWrapBreak
+	content.TextStyle = fyne.TextStyle{Monospace: true}
 
 	prefix := "▶ [RECV]"
 	if isRequest {
