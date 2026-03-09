@@ -1,37 +1,5 @@
 package types
 
-type RTSPMethod string
-
-const (
-	MethodOptions  RTSPMethod = "OPTIONS"
-	MethodDescribe RTSPMethod = "DESCRIBE"
-	MethodSetup    RTSPMethod = "SETUP"
-	MethodPlay     RTSPMethod = "PLAY"
-	MethodPause    RTSPMethod = "PAUSE"
-	MethodTeardown RTSPMethod = "TEARDOWN"
-)
-
-type RTPType int
-
-const (
-	RTPTypeVideo RTPType = iota
-	RTCPTypeVideo
-	RTPTypeAudio
-	RTCPTypeAudio
-)
-
-var RTPTypeNames = map[RTPType]string{
-	RTPTypeVideo:  "Video",
-	RTCPTypeVideo: "RTCP Video",
-	RTPTypeAudio:  "Audio",
-	RTCPTypeAudio: "RTCP Audio",
-}
-
-type RTPPacket struct {
-	Payload []byte
-	Type    RTPType
-}
-
 type CodecType int
 
 const (

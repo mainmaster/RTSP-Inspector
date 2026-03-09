@@ -6,6 +6,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"rtsp-inspector/internal/processor"
+	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/internal/types"
 	"strings"
 	"time"
@@ -50,7 +51,13 @@ func (h *Handlers) HandleConnect() {
 
 func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 	rtpCh := make(chan types.RTPPacket)
-	go h.client.RTPReader(ctx, rtpCh)
+	rtspCh := make(chan rtsp_client.RTSPResponse)
+	go func() {
+		err := h.client.RTPReader(ctx, rtpCh, rtspCh)
+		if err != nil {
+			h.cancel()
+		}
+	}()
 
 	uiTicker := time.NewTicker(200 * time.Millisecond)
 

@@ -25,14 +25,16 @@ type Client struct {
 	Credentials Credentials
 }
 
-func (c *Client) Do(req *Request) (*Response, error) {
+func (c *Client) Do(req *Request) (*RTSPResponse, error) {
 	if c.conn == nil {
 		return nil, errors.New("no connection")
 	}
 	return c.Send(req.BuildRequest())
 }
 
-func (c *Client) Send(payload string) (*Response, error) {
+// TODO - разделить запрос и ответ на методы (Send и readResponse)
+
+func (c *Client) Send(payload string) (*RTSPResponse, error) {
 	defer func() {
 		c.csec++
 	}()
@@ -51,7 +53,7 @@ func (c *Client) Send(payload string) (*Response, error) {
 		return nil, err
 	}
 
-	return &Response{
+	return &RTSPResponse{
 		Headers: h,
 		Body:    body,
 	}, nil
@@ -65,10 +67,10 @@ func (c *Client) setCredentialsFromURL(u url.URL) {
 	c.digestAuth.Password = pass
 }
 
-func (c *Client) readRTSPHeaders() (Headers, error) {
+func (c *Client) readRTSPHeaders() (types.Headers, error) {
 	line, err := c.tp.ReadLine()
 	if err != nil {
-		return Headers{}, err
+		return types.Headers{}, err
 	}
 
 	var code int
@@ -76,10 +78,10 @@ func (c *Client) readRTSPHeaders() (Headers, error) {
 
 	headers, err := c.tp.ReadMIMEHeader()
 	if err != nil {
-		return Headers{}, err
+		return types.Headers{}, err
 	}
 
-	return Headers{
+	return types.Headers{
 		Header:     headers,
 		StatusLine: line,
 		StatusCode: code,
@@ -106,41 +108,65 @@ func (c *Client) readRTSPBody(headers textproto.MIMEHeader) ([]byte, error) {
 	return body, nil
 }
 
-func (c *Client) RTPReader(ctx context.Context, ch chan types.RTPPacket) {
-	defer close(ch)
+func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtspCh chan RTSPResponse) error {
+	defer func() {
+		close(rtpCh)
+
+	}()
 
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		default:
-			peek, err := c.Reader.Peek(1)
+		}
+
+		peek, err := c.Reader.Peek(1)
+		if err != nil {
+			return err // EOF
+		}
+
+		switch peek[0] {
+		case '$': // RTP
+			_, err = c.Reader.Discard(1)
 			if err != nil {
-				return
+				return err
 			}
-			if peek[0] != '$' {
-				return
-			}
-
-			c.Reader.Discard(1)
-
 			channelByte, _ := c.Reader.ReadByte()
 			channel := types.RTPType(channelByte)
 
 			lenBuf := make([]byte, 2)
-			if _, err := io.ReadFull(c.Reader, lenBuf); err != nil {
-				return
+			if _, err = io.ReadFull(c.Reader, lenBuf); err != nil {
+				return err
 			}
 			length := binary.BigEndian.Uint16(lenBuf)
 			payload := make([]byte, length)
-			if _, err := io.ReadFull(c.Reader, payload); err != nil {
-				return
+			if _, err = io.ReadFull(c.Reader, payload); err != nil {
+				return err
 			}
 
-			ch <- types.RTPPacket{
+			rtpCh <- types.RTPPacket{
 				Type:    channel,
 				Payload: payload,
 			}
+		case 'R': // RTSP
+			h, getHeadersErr := c.readRTSPHeaders()
+			if getHeadersErr != nil {
+				return getHeadersErr
+			}
+			b, getBodyErr := c.readRTSPBody(h.Header)
+			if getBodyErr != nil {
+				return getBodyErr
+			}
+			fmt.Println(h, b)
+
+			rtspCh <- RTSPResponse{
+				Headers: h,
+				Body:    b,
+			}
+
+		default:
+			return errors.New("RTP header not supported")
 		}
 	}
 }

@@ -13,16 +13,10 @@ type Credentials struct {
 	Password string
 }
 
-type Header map[string]string
-
-func (h Header) Add(key, value string) {
-	h[key] = value
-}
-
 type Request struct {
 	Method  types.RTSPMethod
 	URL     url.URL
-	Header  Header
+	Header  types.Header
 	trackID int
 	client  *Client
 }
@@ -42,8 +36,8 @@ func (c *Client) NewRequest(method types.RTSPMethod, rtspURL string) (*Request, 
 	}, nil
 }
 
-func getDefaultHeaders() Header {
-	header := make(Header)
+func getDefaultHeaders() types.Header {
+	header := make(types.Header)
 	header.Add("User-Agent", "RTSP-Inspector")
 	return header
 }

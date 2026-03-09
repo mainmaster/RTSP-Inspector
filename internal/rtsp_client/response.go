@@ -1,25 +1,18 @@
 package rtsp_client
 
 import (
-	"net/textproto"
 	"rtsp-inspector/internal/types"
 	"strings"
 
 	"github.com/pixelbender/go-sdp/sdp"
 )
 
-type Headers struct {
-	StatusCode int
-	StatusLine string
-	Header     textproto.MIMEHeader
-}
-
-type Response struct {
-	Headers
+type RTSPResponse struct {
+	types.Headers
 	Body []byte
 }
 
-func (res *Response) GetSessionID() string {
+func (res *RTSPResponse) GetSessionID() string {
 	session := res.Header.Get("Session")
 	if session != "" {
 		session = strings.Split(session, ";")[0]
@@ -27,7 +20,7 @@ func (res *Response) GetSessionID() string {
 	return session
 }
 
-func (res *Response) GetTrackIDs() []string {
+func (res *RTSPResponse) GetTrackIDs() []string {
 	trackIDs := make([]string, 0, 2)
 	sdpSess, err := sdp.ParseString(string(res.Body))
 	if err != nil {
@@ -40,7 +33,7 @@ func (res *Response) GetTrackIDs() []string {
 	return trackIDs
 }
 
-func (res *Response) GetCodecs() (map[string]types.CodecType, error) {
+func (res *RTSPResponse) GetCodecs() (map[string]types.CodecType, error) {
 	codecMap := make(map[string]types.CodecType)
 	sdpSess, err := sdp.ParseString(string(res.Body))
 	if err != nil {

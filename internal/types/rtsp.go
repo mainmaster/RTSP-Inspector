@@ -1,0 +1,26 @@
+package types
+
+import "net/textproto"
+
+type RTSPMethod string
+
+const (
+	MethodOptions  RTSPMethod = "OPTIONS"
+	MethodDescribe RTSPMethod = "DESCRIBE"
+	MethodSetup    RTSPMethod = "SETUP"
+	MethodPlay     RTSPMethod = "PLAY"
+	MethodPause    RTSPMethod = "PAUSE"
+	MethodTeardown RTSPMethod = "TEARDOWN"
+)
+
+type Headers struct {
+	StatusCode int
+	StatusLine string
+	Header     textproto.MIMEHeader
+}
+
+type Header map[string]string
+
+func (h Header) Add(key, value string) {
+	h[key] = value
+}
