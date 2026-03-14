@@ -83,7 +83,5 @@ func (r *Request) BuildRequest() string {
 		}
 	}
 	b.WriteString("\r\n")
-
-	fmt.Println()
 	return b.String()
 }

@@ -15,7 +15,7 @@ func StartApp() {
 	window := myApp.NewWindow("RTSP Inspector")
 
 	ui := NewUIWidgets()
-	client := &rtsp_client.Client{}
+	client := rtsp_client.NewClient()
 	h := &Handlers{
 		ui:       ui,
 		client:   client,

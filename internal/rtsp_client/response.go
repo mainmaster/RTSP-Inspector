@@ -49,3 +49,7 @@ func (res *RTSPResponse) GetCodecs() (map[string]types.CodecType, error) {
 	}
 	return codecMap, nil
 }
+
+func (res *RTSPResponse) GetSDPSession() {
+
+}

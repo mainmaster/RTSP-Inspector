@@ -36,10 +36,6 @@ func (h *Handlers) HandleConnect() {
 			}
 
 			h.disconnect()
-			fyne.Do(func() {
-				h.ui.BtnOpen.SetText("CONNECT")
-			})
-			clear(h.sessions)
 			return
 		}
 
@@ -55,6 +51,11 @@ func (h *Handlers) HandleConnect() {
 }
 
 func (h *Handlers) rtpReaderFlow(ctx context.Context) {
+	uiTicker := time.NewTicker(200 * time.Millisecond)
+	rtspKeepaliveTicker := time.NewTicker(10 * time.Second)
+
+	vp := processor.NewVideoProcessor(h.codecs["video"])
+
 	rtpCh := make(chan types.RTPPacket)
 	rtspCh := make(chan rtsp_client.RTSPResponse)
 	go func() {
@@ -63,10 +64,6 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 			h.cancel()
 		}
 	}()
-
-	uiTicker := time.NewTicker(200 * time.Millisecond)
-
-	vp := processor.NewVideoProcessor(h.codecs["video"])
 
 	go func() {
 		defer uiTicker.Stop()
@@ -81,8 +78,6 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 		}
 	}()
 
-	rtspKeepaliveTicker := time.NewTicker(10 * time.Second)
-
 	go func() {
 		defer h.cancel()
 		for {
@@ -91,7 +86,7 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 				if !ok {
 					return
 				}
-				fmt.Println(rtspPacket)
+				h.ui.AddLogEntry(types.MethodOptions, buildOutputString(rtspPacket.Header, rtspPacket.Body), false)
 			case rtpPacket, ok := <-rtpCh:
 				if !ok {
 					return
@@ -199,10 +194,14 @@ func (h *Handlers) disconnect() {
 	}
 
 	if !h.client.IsEmptyConnection() {
-		_ = h.client.Close()
-		// Ошибка
+		h.client.Close()
 	}
 	h.isConnected = false
+
+	fyne.Do(func() {
+		h.ui.BtnOpen.SetText("CONNECT")
+	})
+	clear(h.sessions)
 }
 
 func (h *Handlers) connect(rtspURL string) {

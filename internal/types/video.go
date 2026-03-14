@@ -107,14 +107,14 @@ var H265TypeLookup = map[int]NALUInfo{
 	32: {H265_NALU_VPS, false},        // VPS
 	33: {H265_NALU_SPS, false},        // SPS
 	34: {H265_NALU_PPS, false},        // PPS
-	35: {H265_NALU_AUD, false},        // AUD (Разделитель)
+	35: {H265_NALU_AUD, false},        // AUD (Splitter)
 	36: {H265_NALU_EOS, false},        // End of Sequence
-	37: {H265_NALU_EOS, false},        // End of Bitstream (Тип 37/62)
+	37: {H265_NALU_EOS, false},        // End of Bitstream (type 37/62)
 	39: {H265_NALU_PREFIX_SEI, false}, // Prefix SEI
 	40: {H265_NALU_SUFFIX_SEI, false}, // Suffix SEI
-	42: {H265_NALU_RSV_NVCL42, false}, // Тот самый тип 42
-	43: {H265_NALU_RSV_NVCL43, false}, // Тот самый тип 43
-	62: {H265_NALU_EOS, false},        // Еще один EOS
+	42: {H265_NALU_RSV_NVCL42, false}, // type 42
+	43: {H265_NALU_RSV_NVCL43, false}, // type 43
+	62: {H265_NALU_EOS, false},        // EOS
 }
 
 var H264TypeLookup = map[int]NALUInfo{

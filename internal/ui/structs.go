@@ -15,5 +15,6 @@ type Handlers struct {
 	cancel      context.CancelFunc
 	isConnected bool
 	codecs      map[string]types.CodecType
-	si          *processor.StreamInspector
+	//ssrc        map[int]int
+	si *processor.StreamInspector
 }
