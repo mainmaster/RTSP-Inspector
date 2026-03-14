@@ -9,12 +9,14 @@ import (
 
 type Handlers struct {
 	rtspURL     string
-	sessions    map[string]struct{}
 	ui          *Widgets
 	client      *rtsp_client.Client
 	cancel      context.CancelFunc
 	isConnected bool
-	codecs      map[string]types.CodecType
-	//ssrc        map[int]int
-	si *processor.StreamInspector
+	si          *processor.StreamInspector
+}
+
+type RTSPFlowResponse struct {
+	codecs   map[string]types.CodecType
+	sessions map[string]struct{}
 }

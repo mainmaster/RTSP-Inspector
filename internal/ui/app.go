@@ -17,10 +17,9 @@ func StartApp() {
 	ui := NewUIWidgets()
 	client := rtsp_client.NewClient()
 	h := &Handlers{
-		ui:       ui,
-		client:   client,
-		si:       processor.NewStreamInspector(),
-		sessions: make(map[string]struct{}),
+		ui:     ui,
+		client: client,
+		si:     processor.NewStreamInspector(),
 	}
 
 	ui.BtnOpen.OnTapped = h.HandleConnect

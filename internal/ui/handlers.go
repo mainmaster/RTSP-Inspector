@@ -28,33 +28,27 @@ func (h *Handlers) HandleConnect() {
 		if !h.isConnected {
 			h.connect(h.rtspURL)
 		} else {
-			for s, _ := range h.sessions {
-				req, _ := h.client.NewRequest(types.MethodTeardown, h.rtspURL)
-				req.SetSessionID(s)
-				h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
-				h.client.Send(req)
-			}
-
 			h.disconnect()
 			return
 		}
 
-		err := h.rtspFlow(h.rtspURL)
+		res, err := h.rtspFlow(h.rtspURL)
 		if err != nil {
 			fmt.Println(err)
 		}
 
 		time.Sleep(1 * time.Second)
 
-		h.rtpReaderFlow(ctx)
+		h.rtpReaderFlow(ctx, res)
+		go h.tearDownWaiting(ctx, res)
 	}()
 }
 
-func (h *Handlers) rtpReaderFlow(ctx context.Context) {
+func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResponse) {
 	uiTicker := time.NewTicker(200 * time.Millisecond)
 	rtspKeepaliveTicker := time.NewTicker(10 * time.Second)
 
-	vp := processor.NewVideoProcessor(h.codecs["video"])
+	vp := processor.NewVideoProcessor(rtspResponse.codecs["video"])
 
 	rtpCh := make(chan types.RTPPacket)
 	rtspCh := make(chan rtsp_client.RTSPResponse)
@@ -80,6 +74,9 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 
 	go func() {
 		defer h.cancel()
+
+		var videoSSRC uint32
+
 		for {
 			select {
 			case rtspPacket, ok := <-rtspCh:
@@ -90,6 +87,9 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 			case rtpPacket, ok := <-rtpCh:
 				if !ok {
 					return
+				}
+				if videoSSRC == 0 && rtpPacket.Type == types.RTPTypeVideo {
+					videoSSRC = rtpPacket.GetSSRC()
 				}
 				h.si.IncrementRTPCounter(&rtpPacket)
 				err := vp.Push(rtpPacket.Payload)
@@ -122,75 +122,74 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context) {
 	}()
 }
 
-func (h *Handlers) rtspFlow(rtspURL string) error {
+func (h *Handlers) rtspFlow(rtspURL string) (*RTSPFlowResponse, error) {
+	rtspFlowRes := &RTSPFlowResponse{}
+
 	req, err := h.client.NewRequest(types.MethodOptions, rtspURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
 	res, err := h.client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
 
 	req, err = h.client.NewRequest(types.MethodDescribe, rtspURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
 
 	describeRes, err := h.client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	codecs, err := describeRes.GetCodecs()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	h.codecs = codecs
+	rtspFlowRes.codecs = codecs
 	h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, describeRes.Body), false)
 
+	rtspFlowRes.sessions = make(map[string]struct{})
 	for _, t := range describeRes.GetTrackIDs() {
 		req, err = h.client.NewRequest(types.MethodSetup, rtspURL)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		req.SetTrackID(t)
 		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
 		setupRes, setupErr := h.client.Do(req)
 		if setupErr != nil {
-			return setupErr
+			return nil, setupErr
 		}
 		h.ui.AddLogEntry(req.Method, buildOutputString(setupRes.Header, setupRes.Body), false)
-		h.sessions[setupRes.GetSessionID()] = struct{}{}
+		rtspFlowRes.sessions[setupRes.GetSessionID()] = struct{}{}
 	}
 
-	for sessionID, _ := range h.sessions {
+	for sessionID, _ := range rtspFlowRes.sessions {
 		req, err = h.client.NewRequest(types.MethodPlay, rtspURL)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		req.SetSessionID(sessionID)
 		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
 
 		res, err = h.client.Do(req)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		h.ui.AddLogEntry(req.Method, buildOutputString(res.Header, res.Body), false)
 	}
-	return nil
+	return rtspFlowRes, nil
 }
 
 func (h *Handlers) disconnect() {
-	err := h.client.Close()
 	if h.cancel != nil {
 		h.cancel()
-	}
-	if err != nil {
-		// Ошибка
 	}
 
 	if !h.client.IsEmptyConnection() {
@@ -201,7 +200,6 @@ func (h *Handlers) disconnect() {
 	fyne.Do(func() {
 		h.ui.BtnOpen.SetText("CONNECT")
 	})
-	clear(h.sessions)
 }
 
 func (h *Handlers) connect(rtspURL string) {
@@ -302,4 +300,26 @@ func buildOutputString(headers textproto.MIMEHeader, body []byte) string {
 	output.WriteString("\r\n")
 	output.WriteString(string(body))
 	return output.String()
+}
+
+func (h *Handlers) tearDownWaiting(ctx context.Context, rtspRes *RTSPFlowResponse) {
+	for {
+		select {
+		case <-ctx.Done():
+			for s, _ := range rtspRes.sessions {
+				req, err := h.client.NewRequest(types.MethodTeardown, h.rtspURL)
+				if err != nil {
+					return
+				}
+				req.SetSessionID(s)
+				h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+				err = h.client.Send(req)
+				if err != nil {
+					return
+				}
+			}
+			return
+		default:
+		}
+	}
 }
