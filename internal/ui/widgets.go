@@ -91,7 +91,11 @@ func (ui *Widgets) UpdateConnectStatus(isConnected bool) {
 	})
 }
 
-func (ui *Widgets) UpdateCounter(counter map[types.RTPType]int) {
+func (ui *Widgets) GetURL() string {
+	return ui.URLEntry.Text
+}
+
+func (ui *Widgets) UpdateRTPCounter(counter map[types.RTPType]int) {
 	fyne.Do(func() {
 		newElementAdded := false
 
@@ -117,5 +121,43 @@ func (ui *Widgets) UpdateCounter(counter map[types.RTPType]int) {
 			ui.RTPForm.Refresh()
 			ui.LogScroll.Refresh()
 		}
+	})
+}
+
+func (ui *Widgets) UpdateNALUCounter(counter map[types.NALUType]int) {
+	fyne.Do(func() {
+		newElementAdded := false
+
+		for nalu, count := range counter {
+			if _, lux := ui.NALULabels[nalu]; !lux {
+				name := types.NALUNames[nalu]
+				if name == "" {
+					continue
+				}
+
+				newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
+				ui.NALULabels[nalu] = newLabel
+				ui.NALUForm.Append(name, newLabel)
+				newElementAdded = true
+			}
+			ui.NALULabels[nalu].SetText(fmt.Sprintf("%d", count))
+		}
+		if newElementAdded {
+			ui.NALUForm.Refresh()
+			ui.LogScroll.Refresh()
+		}
+	})
+}
+
+func (ui *Widgets) ClearCounters() {
+	ui.RTPLabels = make(map[types.RTPType]*widget.Label)
+	ui.NALULabels = make(map[types.NALUType]*widget.Label)
+
+	fyne.Do(func() {
+		ui.RTPForm.Items = nil
+		ui.RTPForm.Refresh()
+
+		ui.NALUForm.Items = nil
+		ui.NALUForm.Refresh()
 	})
 }

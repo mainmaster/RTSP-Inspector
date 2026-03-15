@@ -55,7 +55,7 @@ func (si *StreamInspector) GetNALUCounter() map[types.NALUType]int {
 	return newMap
 }
 
-func (si *StreamInspector) Clear() {
+func (si *StreamInspector) ClearCounters() {
 	si.mu.Lock()
 	defer si.mu.Unlock()
 	clear(si.packetCounter)

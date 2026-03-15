@@ -10,16 +10,14 @@ import (
 	"rtsp-inspector/internal/types"
 	"strings"
 	"time"
-
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/widget"
 )
 
 func (h *Handlers) HandleConnect() {
-	if h.ui.URLEntry.Text == "" {
+	rtspURL := h.ui.GetURL()
+	if rtspURL == "" {
 		return
 	}
-	h.rtspURL = h.ui.URLEntry.Text
+	h.rtspURL = rtspURL
 
 	if h.ctx.Err() != nil {
 		h.ctx, h.cancel = context.WithCancel(context.Background())
@@ -98,6 +96,7 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResp
 				h.si.IncrementRTPCounter(&rtpPacket)
 
 				if rtpPacket.Type != types.RTPTypeVideo {
+					// only video
 					break
 				}
 
@@ -216,50 +215,18 @@ func (h *Handlers) connect(rtspURL string) {
 	h.ui.UpdateConnectStatus(true)
 	h.isConnected = true
 
-	h.si.Clear()
-
-	h.ui.RTPLabels = make(map[types.RTPType]*widget.Label)
-	h.ui.NALULabels = make(map[types.NALUType]*widget.Label)
-
-	fyne.Do(func() {
-		h.ui.RTPForm.Items = nil
-		h.ui.RTPForm.Refresh()
-
-		h.ui.NALUForm.Items = nil
-		h.ui.NALUForm.Refresh()
-	})
+	h.si.ClearCounters()
+	h.ui.ClearCounters()
 }
 
 func (h *Handlers) updateRTPCounter() {
 	counter := h.si.GetRTPCounter()
-	h.ui.UpdateCounter(counter)
+	h.ui.UpdateRTPCounter(counter)
 }
 
 func (h *Handlers) updateNALUCounter() {
 	counter := h.si.GetNALUCounter()
-
-	fyne.Do(func() {
-		newElementAdded := false
-
-		for nalu, count := range counter {
-			if _, lux := h.ui.NALULabels[nalu]; !lux {
-				name := types.NALUNames[nalu]
-				if name == "" {
-					continue
-				}
-
-				newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
-				h.ui.NALULabels[nalu] = newLabel
-				h.ui.NALUForm.Append(name, newLabel)
-				newElementAdded = true
-			}
-			h.ui.NALULabels[nalu].SetText(fmt.Sprintf("%d", count))
-		}
-		if newElementAdded {
-			h.ui.NALUForm.Refresh()
-			h.ui.LogScroll.Refresh()
-		}
-	})
+	h.ui.UpdateNALUCounter(counter)
 }
 
 func buildOutputString(headers textproto.MIMEHeader, body []byte) string {
