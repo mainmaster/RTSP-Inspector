@@ -15,6 +15,7 @@ const (
 
 type RTPPacket struct {
 	Payload []byte
+	Channel byte
 	Type    RTPType
 }
 

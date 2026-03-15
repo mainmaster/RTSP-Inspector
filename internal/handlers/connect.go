@@ -21,8 +21,9 @@ func (h *Handlers) HandleConnect() {
 	}
 	h.rtspURL = h.ui.URLEntry.Text
 
-	ctx, cancel := context.WithCancel(context.Background())
-	h.cancel = cancel
+	if h.ctx.Err() != nil {
+		h.ctx, h.cancel = context.WithCancel(context.Background())
+	}
 
 	go func() {
 		if !h.isConnected {
@@ -39,8 +40,8 @@ func (h *Handlers) HandleConnect() {
 
 		time.Sleep(1 * time.Second)
 
-		h.rtpReaderFlow(ctx, res)
-		go h.tearDownWaiting(ctx, res)
+		h.rtpReaderFlow(h.ctx, res)
+		go h.tearDownWaiting(h.ctx, res)
 	}()
 }
 
@@ -77,6 +78,7 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResp
 		defer h.cancel()
 
 		var videoSSRC uint32
+		var videoChannel byte
 
 		for {
 			select {
@@ -91,8 +93,14 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResp
 				}
 				if videoSSRC == 0 && rtpPacket.Type == types.RTPTypeVideo {
 					videoSSRC = rtpPacket.GetSSRC()
+					videoChannel = rtpPacket.Channel
 				}
 				h.si.IncrementRTPCounter(&rtpPacket)
+
+				if rtpPacket.Type != types.RTPTypeVideo {
+					break
+				}
+
 				err := vp.Push(rtpPacket.Payload)
 				if err != nil {
 					return
@@ -117,7 +125,10 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResp
 					return
 				}
 			case <-keyFrameTicker.C:
-				// TODO здесь запрашиваем через RTCP ключевой кадр, если в течении 2 сек не было его
+				err := h.client.SendPLI(videoChannel, videoSSRC)
+				if err != nil {
+					return
+				}
 			case <-ctx.Done():
 				return
 			}
@@ -201,7 +212,7 @@ func (h *Handlers) disconnect() {
 	h.isConnected = false
 
 	fyne.Do(func() {
-		h.ui.BtnOpen.SetText("CONNECT")
+		h.ui.BtnConnect.SetText("CONNECT")
 	})
 }
 
@@ -218,7 +229,7 @@ func (h *Handlers) connect(rtspURL string) {
 	}
 
 	fyne.Do(func() {
-		h.ui.BtnOpen.SetText("DISCONNECT")
+		h.ui.BtnConnect.SetText("DISCONNECT")
 	})
 	h.isConnected = true
 

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"rtsp-inspector/internal/rtsp_client/auth"
 	"rtsp-inspector/internal/types"
+	"time"
 )
 
 type Client struct {
@@ -64,6 +65,7 @@ func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtsp
 			rtpCh <- types.RTPPacket{
 				Type:    channel,
 				Payload: payload,
+				Channel: channelByte,
 			}
 		case 'R': // RTSP
 			h, getHeadersErr := c.readRTSPHeaders()
@@ -82,6 +84,11 @@ func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtsp
 
 		default:
 			return errors.New("RTP header not supported")
+		}
+
+		err = c.conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		if err != nil {
+			return err
 		}
 	}
 }

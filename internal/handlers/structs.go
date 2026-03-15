@@ -12,16 +12,21 @@ type Handlers struct {
 	rtspURL     string
 	ui          *ui.Widgets
 	client      *rtsp_client.Client
+	ctx         context.Context
 	cancel      context.CancelFunc
 	isConnected bool
 	si          *processor.StreamInspector
 }
 
 func NewHandlers(client *rtsp_client.Client, widgets *ui.Widgets) *Handlers {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Handlers{
 		ui:     widgets,
 		client: client,
 		si:     processor.NewStreamInspector(),
+		ctx:    ctx,
+		cancel: cancel,
 	}
 }
 

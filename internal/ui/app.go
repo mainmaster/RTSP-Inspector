@@ -25,7 +25,7 @@ func makeTopPanel(ui *Widgets) fyne.CanvasObject {
 		nil,
 		nil,
 		nil,
-		ui.BtnOpen,
+		ui.BtnConnect,
 		ui.URLEntry,
 	)
 }

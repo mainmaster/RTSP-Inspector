@@ -16,7 +16,7 @@ func main() {
 	client := rtsp_client.NewClient()
 	h := handlers.NewHandlers(client, widgets)
 
-	widgets.BtnOpen.OnTapped = h.HandleConnect
+	widgets.BtnConnect.OnTapped = h.HandleConnect
 
 	ui.CreateAndRun(window, widgets)
 }
