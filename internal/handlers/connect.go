@@ -232,33 +232,7 @@ func (h *Handlers) connect(rtspURL string) {
 
 func (h *Handlers) updateRTPCounter() {
 	counter := h.si.GetRTPCounter()
-
-	fyne.Do(func() {
-		newElementAdded := false
-
-		if len(h.ui.RTPLabels) == 0 && len(h.ui.RTPForm.Items) > 0 {
-			h.ui.RTPForm.Items = nil
-		}
-
-		for rtp, count := range counter {
-			if _, lux := h.ui.RTPLabels[rtp]; !lux {
-				name := types.RTPTypeNames[rtp]
-				if name == "" {
-					continue
-				}
-
-				newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
-				h.ui.RTPLabels[rtp] = newLabel
-				h.ui.RTPForm.Append(name, newLabel)
-				newElementAdded = true
-			}
-			h.ui.RTPLabels[rtp].SetText(fmt.Sprintf("%d", count))
-		}
-		if newElementAdded {
-			h.ui.RTPForm.Refresh()
-			h.ui.LogScroll.Refresh()
-		}
-	})
+	h.ui.UpdateCounter(counter)
 }
 
 func (h *Handlers) updateNALUCounter() {

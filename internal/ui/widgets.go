@@ -90,3 +90,32 @@ func (ui *Widgets) UpdateConnectStatus(isConnected bool) {
 		ui.BtnConnect.Refresh()
 	})
 }
+
+func (ui *Widgets) UpdateCounter(counter map[types.RTPType]int) {
+	fyne.Do(func() {
+		newElementAdded := false
+
+		if len(ui.RTPLabels) == 0 && len(ui.RTPForm.Items) > 0 {
+			ui.RTPForm.Items = nil
+		}
+
+		for rtp, count := range counter {
+			if _, lux := ui.RTPLabels[rtp]; !lux {
+				name := types.RTPTypeNames[rtp]
+				if name == "" {
+					continue
+				}
+
+				newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
+				ui.RTPLabels[rtp] = newLabel
+				ui.RTPForm.Append(name, newLabel)
+				newElementAdded = true
+			}
+			ui.RTPLabels[rtp].SetText(fmt.Sprintf("%d", count))
+		}
+		if newElementAdded {
+			ui.RTPForm.Refresh()
+			ui.LogScroll.Refresh()
+		}
+	})
+}
