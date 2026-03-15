@@ -16,7 +16,7 @@ func CreateAndRun(window fyne.Window, widgets *Widgets) {
 	)
 
 	window.SetContent(container.NewPadded(content))
-	window.Resize(fyne.NewSize(1000, 600))
+	window.Resize(fyne.NewSize(1000, 1200))
 	window.ShowAndRun()
 }
 

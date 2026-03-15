@@ -15,6 +15,8 @@ const (
 	timeFormat     = "15:04:05.000"
 	logFormat      = "[%s] %s %s"
 	defaultRTSP    = "rtsp://admin:qwerty123@192.168.31.176:554/RVi/1/1"
+	recvPrefix     = "▶ [RECV]"
+	sentPrefix     = "◀ [SENT]"
 )
 
 type LogEntry struct {
@@ -65,9 +67,9 @@ func NewUIWidgets() *Widgets {
 	return ui
 }
 func (ui *Widgets) AddLogEntry(title types.RTSPMethod, body string, isRequest bool) {
-	prefix := "▶ [RECV]"
+	prefix := recvPrefix
 	if isRequest {
-		prefix = "◀ [SENT]"
+		prefix = sentPrefix
 	}
 	fullTitle := fmt.Sprintf(logFormat, time.Now().Format(timeFormat), prefix, string(title))
 
