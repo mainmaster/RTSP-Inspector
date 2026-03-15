@@ -1,19 +1,28 @@
-package ui
+package handlers
 
 import (
 	"context"
 	"rtsp-inspector/internal/processor"
 	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/internal/types"
+	"rtsp-inspector/internal/ui"
 )
 
 type Handlers struct {
 	rtspURL     string
-	ui          *Widgets
+	ui          *ui.Widgets
 	client      *rtsp_client.Client
 	cancel      context.CancelFunc
 	isConnected bool
 	si          *processor.StreamInspector
+}
+
+func NewHandlers(client *rtsp_client.Client, widgets *ui.Widgets) *Handlers {
+	return &Handlers{
+		ui:     widgets,
+		client: client,
+		si:     processor.NewStreamInspector(),
+	}
 }
 
 type RTSPFlowResponse struct {

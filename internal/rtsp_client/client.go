@@ -28,7 +28,6 @@ func NewClient() *Client {
 func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtspCh chan RTSPResponse) error {
 	defer func() {
 		close(rtpCh)
-
 	}()
 
 	for {

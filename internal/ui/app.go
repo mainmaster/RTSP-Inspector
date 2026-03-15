@@ -1,35 +1,18 @@
 package ui
 
 import (
-	"rtsp-inspector/internal/processor"
-	"rtsp-inspector/internal/rtsp_client"
-
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 )
 
-func StartApp() {
-	myApp := app.New()
-	window := myApp.NewWindow("RTSP Inspector")
-
-	ui := NewUIWidgets()
-	client := rtsp_client.NewClient()
-	h := &Handlers{
-		ui:     ui,
-		client: client,
-		si:     processor.NewStreamInspector(),
-	}
-
-	ui.BtnOpen.OnTapped = h.HandleConnect
-
+func CreateAndRun(window fyne.Window, widgets *Widgets) {
 	content := container.NewBorder(
-		makeTopPanel(ui),
+		makeTopPanel(widgets),
 		makeBottomPanel(),
 		nil,
 		nil,
-		makeCenterContent(ui),
+		makeCenterContent(widgets),
 	)
 
 	window.SetContent(container.NewPadded(content))

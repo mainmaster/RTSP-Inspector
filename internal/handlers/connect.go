@@ -1,4 +1,4 @@
-package ui
+package handlers
 
 import (
 	"context"
@@ -47,6 +47,7 @@ func (h *Handlers) HandleConnect() {
 func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResponse) {
 	uiTicker := time.NewTicker(200 * time.Millisecond)
 	rtspKeepaliveTicker := time.NewTicker(10 * time.Second)
+	keyFrameTicker := time.NewTicker(2 * time.Second)
 
 	vp := processor.NewVideoProcessor(rtspResponse.codecs["video"])
 
@@ -115,6 +116,8 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResp
 				if err != nil {
 					return
 				}
+			case <-keyFrameTicker.C:
+				// TODO здесь запрашиваем через RTCP ключевой кадр, если в течении 2 сек не было его
 			case <-ctx.Done():
 				return
 			}
