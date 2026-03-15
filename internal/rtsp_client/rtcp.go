@@ -16,7 +16,6 @@ func (c *Client) SendPLI(rtcpChannel byte, ssrc uint32) error {
 		return err
 	}
 
-	// Формируем заголовок RTSP Interleaved ($ + channel + 2 bytes length)
 	header := make([]byte, 4)
 	header[0] = '$'
 	header[1] = rtcpChannel

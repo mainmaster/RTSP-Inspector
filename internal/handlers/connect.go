@@ -45,8 +45,7 @@ func (h *Handlers) HandleConnect() {
 
 func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResponse) {
 	uiTicker := time.NewTicker(200 * time.Millisecond)
-	rtspKeepaliveTicker := time.NewTicker(10 * time.Second)
-	keyFrameTicker := time.NewTicker(2 * time.Second)
+	rtspKeepaliveTicker := time.NewTicker(20 * time.Second)
 
 	vp := processor.NewVideoProcessor(rtspResponse.codecs["video"])
 
@@ -75,9 +74,6 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResp
 	go func() {
 		defer h.cancel()
 
-		var videoSSRC uint32
-		var videoChannel byte
-
 		for {
 			select {
 			case rtspPacket, ok := <-rtspCh:
@@ -88,10 +84,6 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResp
 			case rtpPacket, ok := <-rtpCh:
 				if !ok {
 					return
-				}
-				if videoSSRC == 0 && rtpPacket.Type == types.RTPTypeVideo {
-					videoSSRC = rtpPacket.GetSSRC()
-					videoChannel = rtpPacket.Channel
 				}
 				h.si.IncrementRTPCounter(&rtpPacket)
 
@@ -120,11 +112,6 @@ func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResp
 				req, _ := h.client.NewRequest(types.MethodOptions, h.rtspURL)
 				h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
 				err := h.client.Send(req)
-				if err != nil {
-					return
-				}
-			case <-keyFrameTicker.C:
-				err := h.client.SendPLI(videoChannel, videoSSRC)
 				if err != nil {
 					return
 				}

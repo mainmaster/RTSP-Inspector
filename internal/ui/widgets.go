@@ -6,75 +6,75 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
 
 const (
 	connectText    = "CONNECT"
 	disconnectText = "DISCONNECT"
+	timeFormat     = "15:04:05.000"
+	logFormat      = "[%s] %s %s"
+	defaultRTSP    = "rtsp://admin:qwerty123@192.168.31.176:554/RVi/1/1"
 )
 
+type LogEntry struct {
+	Title string
+	Body  string
+}
+
 type Widgets struct {
-	urlEntry     *widget.Entry
-	BtnConnect   *widget.Button
-	rtpForm      *widget.Form
-	rtpLabels    map[types.RTPType]*widget.Label
-	naluLabels   map[types.NALUType]*widget.Label
-	naluForm     *widget.Form
-	logAccordion *widget.Accordion // Вместо LogOutput
-	logScroll    *container.Scroll
+	urlEntry   *widget.Entry
+	BtnConnect *widget.Button
+	rtpForm    *widget.Form
+	rtpLabels  map[types.RTPType]*widget.Label
+	naluLabels map[types.NALUType]*widget.Label
+	naluForm   *widget.Form
+	logs       []LogEntry
+	logList    *widget.List
+	detailView *widget.Entry // Правая часть: содержимое лога
 }
 
 func NewUIWidgets() *Widgets {
-	url := widget.NewEntry()
-	url.SetText("rtsp://admin:qwerty123@192.168.31.176:554/RVi/1/1")
-
-	log := widget.NewEntry()
-	log.MultiLine = true
-	log.MultiLine = true
-	log.Wrapping = fyne.TextWrapOff
-
-	requestBody := widget.NewEntry()
-	requestBody.MultiLine = true
-	log.MultiLine = true
-	log.Wrapping = fyne.TextWrapOff
-
-	statsForm := widget.NewForm()
-	naluForm := widget.NewForm()
-
-	accordion := widget.NewAccordion()
-	accordion.MultiOpen = true
-
-	return &Widgets{
-		urlEntry:     url,
-		logAccordion: accordion,
-		logScroll:    container.NewScroll(accordion),
-		BtnConnect:   widget.NewButton("CONNECT", nil),
-		rtpForm:      statsForm,
-		rtpLabels:    make(map[types.RTPType]*widget.Label),
-		naluLabels:   make(map[types.NALUType]*widget.Label),
-		naluForm:     naluForm,
+	ui := &Widgets{
+		urlEntry:   widget.NewEntry(),
+		rtpForm:    widget.NewForm(),
+		rtpLabels:  make(map[types.RTPType]*widget.Label),
+		naluLabels: make(map[types.NALUType]*widget.Label),
+		naluForm:   widget.NewForm(),
+		BtnConnect: widget.NewButton(connectText, nil),
+		logs:       []LogEntry{},
 	}
+	ui.urlEntry.SetText(defaultRTSP)
+
+	ui.detailView = widget.NewMultiLineEntry()
+	ui.detailView.Wrapping = fyne.TextWrapBreak
+	ui.detailView.TextStyle = fyne.TextStyle{Monospace: true}
+
+	ui.logList = widget.NewList(
+		func() int { return len(ui.logs) },
+		func() fyne.CanvasObject { return widget.NewLabel("Template") },
+		func(id widget.ListItemID, obj fyne.CanvasObject) {
+			obj.(*widget.Label).SetText(ui.logs[id].Title)
+		},
+	)
+
+	ui.logList.OnSelected = func(id widget.ListItemID) {
+		ui.detailView.SetText(ui.logs[id].Body)
+	}
+
+	return ui
 }
-
 func (ui *Widgets) AddLogEntry(title types.RTSPMethod, body string, isRequest bool) {
-	content := widget.NewMultiLineEntry()
-	content.SetText(body)
-	content.Wrapping = fyne.TextWrapBreak
-	content.TextStyle = fyne.TextStyle{Monospace: true}
-
 	prefix := "▶ [RECV]"
 	if isRequest {
 		prefix = "◀ [SENT]"
 	}
-	timestamp := time.Now().Format("15:04:05.000")
-	fullTitle := fmt.Sprintf("[%s] %s %s", timestamp, prefix, string(title))
-	item := widget.NewAccordionItem(fullTitle, content)
+	fullTitle := fmt.Sprintf(logFormat, time.Now().Format(timeFormat), prefix, string(title))
 
 	fyne.Do(func() {
-		ui.logAccordion.Append(item)
-		ui.logScroll.ScrollToBottom()
+		ui.logs = append(ui.logs, LogEntry{Title: fullTitle, Body: body})
+		ui.logList.Refresh()
+		ui.logList.Select(len(ui.logs) - 1)
 	})
 }
 
@@ -119,7 +119,6 @@ func (ui *Widgets) UpdateRTPCounter(counter map[types.RTPType]int) {
 		}
 		if newElementAdded {
 			ui.rtpForm.Refresh()
-			ui.logScroll.Refresh()
 		}
 	})
 }
@@ -144,7 +143,6 @@ func (ui *Widgets) UpdateNALUCounter(counter map[types.NALUType]int) {
 		}
 		if newElementAdded {
 			ui.naluForm.Refresh()
-			ui.logScroll.Refresh()
 		}
 	})
 }

@@ -31,13 +31,19 @@ func makeTopPanel(ui *Widgets) fyne.CanvasObject {
 }
 
 func makeCenterContent(ui *Widgets) fyne.CanvasObject {
-	top := ui.logScroll
+	logSplit := container.NewHSplit(
+		ui.logList,
+		ui.detailView,
+	)
+	logSplit.Offset = 0.3
+
 	leftStats := container.NewVScroll(ui.rtpForm)
 	rightStats := container.NewVScroll(ui.naluForm)
 	bottomSplit := container.NewHSplit(leftStats, rightStats)
-	bottomSplit.Offset = 0.2
-	mainSplit := container.NewVSplit(top, bottomSplit)
-	mainSplit.Offset = 0.6
+	bottomSplit.Offset = 0.3
+
+	mainSplit := container.NewVSplit(logSplit, bottomSplit)
+	mainSplit.Offset = 0.7
 
 	return mainSplit
 }
