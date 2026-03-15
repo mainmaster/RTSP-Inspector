@@ -201,21 +201,6 @@ func (h *Handlers) rtspFlow(rtspURL string) (*RTSPFlowResponse, error) {
 	return rtspFlowRes, nil
 }
 
-func (h *Handlers) disconnect() {
-	if h.cancel != nil {
-		h.cancel()
-	}
-
-	if !h.client.IsEmptyConnection() {
-		h.client.Close()
-	}
-	h.isConnected = false
-
-	fyne.Do(func() {
-		h.ui.BtnConnect.SetText("CONNECT")
-	})
-}
-
 func (h *Handlers) connect(rtspURL string) {
 	u, err := url.Parse(rtspURL)
 	if err != nil {
@@ -228,9 +213,7 @@ func (h *Handlers) connect(rtspURL string) {
 		// Ошибка
 	}
 
-	fyne.Do(func() {
-		h.ui.BtnConnect.SetText("DISCONNECT")
-	})
+	h.ui.UpdateConnectStatus(true)
 	h.isConnected = true
 
 	h.si.Clear()

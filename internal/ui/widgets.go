@@ -10,6 +10,11 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+const (
+	connectText    = "CONNECT"
+	disconnectText = "DISCONNECT"
+)
+
 type Widgets struct {
 	URLEntry     *widget.Entry
 	BtnConnect   *widget.Button
@@ -70,5 +75,18 @@ func (ui *Widgets) AddLogEntry(title types.RTSPMethod, body string, isRequest bo
 	fyne.Do(func() {
 		ui.LogAccordion.Append(item)
 		ui.LogScroll.ScrollToBottom()
+	})
+}
+
+func (ui *Widgets) UpdateConnectStatus(isConnected bool) {
+	fyne.Do(func() {
+		if isConnected {
+			ui.BtnConnect.SetText(disconnectText)
+			ui.BtnConnect.Importance = widget.DangerImportance
+		} else {
+			ui.BtnConnect.SetText(connectText)
+			ui.BtnConnect.Importance = widget.HighImportance
+		}
+		ui.BtnConnect.Refresh()
 	})
 }

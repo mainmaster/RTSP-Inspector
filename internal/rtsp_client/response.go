@@ -8,6 +8,7 @@ import (
 )
 
 type RTSPResponse struct {
+	Method types.RTSPMethod
 	types.Headers
 	Body []byte
 }
@@ -49,10 +50,3 @@ func (res *RTSPResponse) GetCodecs() (map[string]types.CodecType, error) {
 	}
 	return codecMap, nil
 }
-
-/*
-func (res *RTSPResponse) GetChannelsMap() (map[types.RTPType]int, error) {
-	channelsMap := make(map[types.RTPType]int)
-	tracks := res.GetTrackIDs()
-}
-*/
