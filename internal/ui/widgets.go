@@ -16,14 +16,14 @@ const (
 )
 
 type Widgets struct {
-	URLEntry     *widget.Entry
+	urlEntry     *widget.Entry
 	BtnConnect   *widget.Button
-	RTPForm      *widget.Form
-	RTPLabels    map[types.RTPType]*widget.Label
-	NALULabels   map[types.NALUType]*widget.Label
-	NALUForm     *widget.Form
-	LogAccordion *widget.Accordion // Вместо LogOutput
-	LogScroll    *container.Scroll
+	rtpForm      *widget.Form
+	rtpLabels    map[types.RTPType]*widget.Label
+	naluLabels   map[types.NALUType]*widget.Label
+	naluForm     *widget.Form
+	logAccordion *widget.Accordion // Вместо LogOutput
+	logScroll    *container.Scroll
 }
 
 func NewUIWidgets() *Widgets {
@@ -47,14 +47,14 @@ func NewUIWidgets() *Widgets {
 	accordion.MultiOpen = true
 
 	return &Widgets{
-		URLEntry:     url,
-		LogAccordion: accordion,
-		LogScroll:    container.NewScroll(accordion),
+		urlEntry:     url,
+		logAccordion: accordion,
+		logScroll:    container.NewScroll(accordion),
 		BtnConnect:   widget.NewButton("CONNECT", nil),
-		RTPForm:      statsForm,
-		RTPLabels:    make(map[types.RTPType]*widget.Label),
-		NALULabels:   make(map[types.NALUType]*widget.Label),
-		NALUForm:     naluForm,
+		rtpForm:      statsForm,
+		rtpLabels:    make(map[types.RTPType]*widget.Label),
+		naluLabels:   make(map[types.NALUType]*widget.Label),
+		naluForm:     naluForm,
 	}
 }
 
@@ -73,8 +73,8 @@ func (ui *Widgets) AddLogEntry(title types.RTSPMethod, body string, isRequest bo
 	item := widget.NewAccordionItem(fullTitle, content)
 
 	fyne.Do(func() {
-		ui.LogAccordion.Append(item)
-		ui.LogScroll.ScrollToBottom()
+		ui.logAccordion.Append(item)
+		ui.logScroll.ScrollToBottom()
 	})
 }
 
@@ -92,34 +92,34 @@ func (ui *Widgets) UpdateConnectStatus(isConnected bool) {
 }
 
 func (ui *Widgets) GetURL() string {
-	return ui.URLEntry.Text
+	return ui.urlEntry.Text
 }
 
 func (ui *Widgets) UpdateRTPCounter(counter map[types.RTPType]int) {
 	fyne.Do(func() {
 		newElementAdded := false
 
-		if len(ui.RTPLabels) == 0 && len(ui.RTPForm.Items) > 0 {
-			ui.RTPForm.Items = nil
+		if len(ui.rtpLabels) == 0 && len(ui.rtpForm.Items) > 0 {
+			ui.rtpForm.Items = nil
 		}
 
 		for rtp, count := range counter {
-			if _, lux := ui.RTPLabels[rtp]; !lux {
+			if _, lux := ui.rtpLabels[rtp]; !lux {
 				name := types.RTPTypeNames[rtp]
 				if name == "" {
 					continue
 				}
 
 				newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
-				ui.RTPLabels[rtp] = newLabel
-				ui.RTPForm.Append(name, newLabel)
+				ui.rtpLabels[rtp] = newLabel
+				ui.rtpForm.Append(name, newLabel)
 				newElementAdded = true
 			}
-			ui.RTPLabels[rtp].SetText(fmt.Sprintf("%d", count))
+			ui.rtpLabels[rtp].SetText(fmt.Sprintf("%d", count))
 		}
 		if newElementAdded {
-			ui.RTPForm.Refresh()
-			ui.LogScroll.Refresh()
+			ui.rtpForm.Refresh()
+			ui.logScroll.Refresh()
 		}
 	})
 }
@@ -129,35 +129,35 @@ func (ui *Widgets) UpdateNALUCounter(counter map[types.NALUType]int) {
 		newElementAdded := false
 
 		for nalu, count := range counter {
-			if _, lux := ui.NALULabels[nalu]; !lux {
+			if _, lux := ui.naluLabels[nalu]; !lux {
 				name := types.NALUNames[nalu]
 				if name == "" {
 					continue
 				}
 
 				newLabel := widget.NewLabel(fmt.Sprintf("%d", count))
-				ui.NALULabels[nalu] = newLabel
-				ui.NALUForm.Append(name, newLabel)
+				ui.naluLabels[nalu] = newLabel
+				ui.naluForm.Append(name, newLabel)
 				newElementAdded = true
 			}
-			ui.NALULabels[nalu].SetText(fmt.Sprintf("%d", count))
+			ui.naluLabels[nalu].SetText(fmt.Sprintf("%d", count))
 		}
 		if newElementAdded {
-			ui.NALUForm.Refresh()
-			ui.LogScroll.Refresh()
+			ui.naluForm.Refresh()
+			ui.logScroll.Refresh()
 		}
 	})
 }
 
 func (ui *Widgets) ClearCounters() {
-	ui.RTPLabels = make(map[types.RTPType]*widget.Label)
-	ui.NALULabels = make(map[types.NALUType]*widget.Label)
+	ui.rtpLabels = make(map[types.RTPType]*widget.Label)
+	ui.naluLabels = make(map[types.NALUType]*widget.Label)
 
 	fyne.Do(func() {
-		ui.RTPForm.Items = nil
-		ui.RTPForm.Refresh()
+		ui.rtpForm.Items = nil
+		ui.rtpForm.Refresh()
 
-		ui.NALUForm.Items = nil
-		ui.NALUForm.Refresh()
+		ui.naluForm.Items = nil
+		ui.naluForm.Refresh()
 	})
 }

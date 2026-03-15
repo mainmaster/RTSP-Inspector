@@ -229,17 +229,6 @@ func (h *Handlers) updateNALUCounter() {
 	h.ui.UpdateNALUCounter(counter)
 }
 
-func buildOutputString(headers textproto.MIMEHeader, body []byte) string {
-	var output strings.Builder
-	for k, v := range headers {
-		output.WriteString(fmt.Sprintf("%s: %s", k, v[0]))
-		output.WriteString("\r\n")
-	}
-	output.WriteString("\r\n")
-	output.WriteString(string(body))
-	return output.String()
-}
-
 func (h *Handlers) tearDownWaiting(ctx context.Context, rtspRes *RTSPFlowResponse) {
 	for {
 		select {
@@ -260,4 +249,15 @@ func (h *Handlers) tearDownWaiting(ctx context.Context, rtspRes *RTSPFlowRespons
 		default:
 		}
 	}
+}
+
+func buildOutputString(headers textproto.MIMEHeader, body []byte) string {
+	var output strings.Builder
+	for k, v := range headers {
+		output.WriteString(fmt.Sprintf("%s: %s", k, v[0]))
+		output.WriteString("\r\n")
+	}
+	output.WriteString("\r\n")
+	output.WriteString(string(body))
+	return output.String()
 }

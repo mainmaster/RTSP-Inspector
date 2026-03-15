@@ -26,14 +26,14 @@ func makeTopPanel(ui *Widgets) fyne.CanvasObject {
 		nil,
 		nil,
 		ui.BtnConnect,
-		ui.URLEntry,
+		ui.urlEntry,
 	)
 }
 
 func makeCenterContent(ui *Widgets) fyne.CanvasObject {
-	top := ui.LogScroll
-	leftStats := container.NewVScroll(ui.RTPForm)
-	rightStats := container.NewVScroll(ui.NALUForm)
+	top := ui.logScroll
+	leftStats := container.NewVScroll(ui.rtpForm)
+	rightStats := container.NewVScroll(ui.naluForm)
 	bottomSplit := container.NewHSplit(leftStats, rightStats)
 	bottomSplit.Offset = 0.2
 	mainSplit := container.NewVSplit(top, bottomSplit)
