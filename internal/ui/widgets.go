@@ -161,3 +161,12 @@ func (ui *Widgets) ClearCounters() {
 		ui.naluForm.Refresh()
 	})
 }
+
+func (ui *Widgets) ClearLogs() {
+	fyne.Do(func() {
+		ui.logs = []LogEntry{}
+		ui.logList.UnselectAll()
+		ui.logList.Refresh()
+		ui.detailView.SetText("")
+	})
+}

@@ -203,6 +203,7 @@ func (h *Handlers) connect(rtspURL string) error {
 
 	h.si.ClearCounters()
 	h.ui.ClearCounters()
+	h.ui.ClearLogs()
 
 	return nil
 }
