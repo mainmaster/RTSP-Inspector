@@ -28,7 +28,6 @@ func main() {
 			h.SetCtxCancel(cancel)
 			h.HandleConnect(ctx)
 		}
-		h.HandleConnect(ctx)
 	}
 
 	ui.CreateAndRun(window, widgets)
