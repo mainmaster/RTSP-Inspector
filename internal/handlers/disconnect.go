@@ -1,6 +1,8 @@
 package handlers
 
-func (h *Handlers) disconnect() {
+import "context"
+
+func (h *Handlers) HandelDisconnect(ctx context.Context) {
 	if h.cancel != nil {
 		h.cancel()
 	}
@@ -8,7 +10,7 @@ func (h *Handlers) disconnect() {
 	if !h.client.IsEmptyConnection() {
 		h.client.Close()
 	}
-	h.isConnected = false
+	h.IsConnected = false
 
 	h.ui.UpdateConnectStatus(false)
 }

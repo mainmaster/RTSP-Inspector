@@ -12,35 +12,35 @@ import (
 	"time"
 )
 
-func (h *Handlers) HandleConnect() {
+func (h *Handlers) HandleConnect(ctx context.Context) {
 	rtspURL := h.ui.GetURL()
 	if rtspURL == "" {
 		return
 	}
 	h.rtspURL = rtspURL
 
-	if h.ctx.Err() != nil {
-		h.ctx, h.cancel = context.WithCancel(context.Background())
-	}
-
 	go func() {
-		if !h.isConnected {
-			h.connect(h.rtspURL)
-		} else {
-			h.disconnect()
+		err := h.connect(h.rtspURL)
+		if err != nil {
+			fmt.Println(err)
 			return
 		}
 
 		res, err := h.rtspFlow(h.rtspURL)
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 
 		time.Sleep(1 * time.Second)
 
-		h.rtpReaderFlow(h.ctx, res)
-		go h.tearDownWaiting(h.ctx, res)
+		h.rtpReaderFlow(ctx, res)
+		go h.tearDownWaiting(ctx, res)
 	}()
+}
+
+func (h *Handlers) SetCtxCancel(cancel context.CancelFunc) {
+	h.cancel = cancel
 }
 
 func (h *Handlers) rtpReaderFlow(ctx context.Context, rtspResponse *RTSPFlowResponse) {
@@ -187,23 +187,24 @@ func (h *Handlers) rtspFlow(rtspURL string) (*RTSPFlowResponse, error) {
 	return rtspFlowRes, nil
 }
 
-func (h *Handlers) connect(rtspURL string) {
+func (h *Handlers) connect(rtspURL string) error {
 	u, err := url.Parse(rtspURL)
 	if err != nil {
-		// Ошибка
-		return
+		return err
 	}
 
 	err = h.client.Connect(*u)
 	if err != nil {
-		// Ошибка
+		return err
 	}
 
 	h.ui.UpdateConnectStatus(true)
-	h.isConnected = true
+	h.IsConnected = true
 
 	h.si.ClearCounters()
 	h.ui.ClearCounters()
+
+	return nil
 }
 
 func (h *Handlers) updateRTPCounter() {

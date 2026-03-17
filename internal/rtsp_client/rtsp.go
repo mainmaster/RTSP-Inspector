@@ -63,7 +63,15 @@ func (c *Client) readRTSPHeaders() (types.Headers, error) {
 	}
 
 	var code int
-	fmt.Sscanf(line, "RTSP/1.0 %d", &code)
+	_, err = fmt.Sscanf(line, "RTSP/1.0 %d", &code)
+
+	if err != nil {
+		return types.Headers{}, fmt.Errorf("can not parse RTSP response %s", line)
+	}
+
+	if code != 200 {
+		return types.Headers{}, fmt.Errorf("invalid RTSP code - %d, %s", code, line)
+	}
 
 	headers, err := c.tp.ReadMIMEHeader()
 	if err != nil {
