@@ -28,11 +28,11 @@ func (si *StreamInspector) IncrementNALUCounter(nalus []types.NALUType) {
 	}
 }
 
-func (si *StreamInspector) IncrementRTPCounter(packet *types.RTPPacket) {
+func (si *StreamInspector) IncrementRTPCounter(rtpType types.RTPType) {
 	si.mu.Lock()
 	defer si.mu.Unlock()
 
-	si.packetCounter[packet.Type]++
+	si.packetCounter[rtpType]++
 }
 
 func (si *StreamInspector) GetRTPCounter() map[types.RTPType]int {

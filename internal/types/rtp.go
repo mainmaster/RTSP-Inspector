@@ -15,8 +15,7 @@ const (
 
 type RTPPacket struct {
 	Payload []byte
-	Channel byte
-	Type    RTPType
+	Channel int
 }
 
 var RTPTypeNames = map[RTPType]string{

@@ -5,7 +5,8 @@ import "net/textproto"
 type TrackType int
 
 const (
-	TrackTypeAudio TrackType = iota
+	TrackTypeUnknown TrackType = iota
+	TrackTypeAudio
 	TrackTypeVideo
 )
 

@@ -8,7 +8,6 @@ import (
 	"rtsp-inspector/internal/processor"
 	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/internal/types"
-	"strings"
 	"time"
 )
 
@@ -45,7 +44,7 @@ func (h *Handlers) HandleConnect(ctx context.Context) {
 		}()
 
 		go func() {
-			err = h.readDataChannels(ctx, rtpCh, rtspCh, rtspRes.codecs["video"])
+			err = h.readDataChannels(ctx, rtpCh, rtspCh, rtspRes)
 			if err != nil {
 				h.cancel(err)
 			}
@@ -60,9 +59,11 @@ func (h *Handlers) SetCtxCancel(cancel context.CancelCauseFunc) {
 	h.cancel = cancel
 }
 
-func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPacket, rtspCh chan rtsp_client.RTSPResponse, codec types.CodecType) error {
+func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPacket, rtspCh chan rtsp_client.RTSPResponse, rtspRes *RTSPFlowResponse) error {
 	rtspKeepaliveTicker := time.NewTicker(20 * time.Second)
-	vp := processor.NewVideoProcessor(codec)
+	vp := processor.NewVideoProcessor(rtspRes.codecs[types.TrackTypeVideo])
+	interleavedMap := getMapFromInterleaved(rtspRes)
+
 	for {
 		select {
 		case rtspPacket, ok := <-rtspCh:
@@ -74,26 +75,29 @@ func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPac
 			if !ok {
 				return nil
 			}
-			h.si.IncrementRTPCounter(&rtpPacket)
 
-			if rtpPacket.Type != types.RTPTypeVideo {
-				// only video
-				break
-			}
+			rtpType := interleavedMap[rtpPacket.Channel]
+			h.si.IncrementRTPCounter(rtpType)
 
-			err := vp.Push(rtpPacket.Payload)
-			if err != nil {
-				return err
-			}
-			for {
-				frame := vp.Pop()
-				if frame == nil {
-					break
+			switch rtpType {
+			case types.RTPTypeAudio:
+			case types.RTPTypeVideo:
+				err := vp.Push(rtpPacket.Payload)
+				if err != nil {
+					return err
 				}
-				info := vp.GetFrameInfo(frame)
-				if info != nil {
-					h.si.IncrementNALUCounter(info.NALUs)
+				for {
+					frame := vp.Pop()
+					if frame == nil {
+						break
+					}
+					info := vp.GetFrameInfo(frame)
+					if info != nil {
+						h.si.IncrementNALUCounter(info.NALUs)
+					}
 				}
+			case types.RTCPTypeAudio:
+			case types.RTCPTypeVideo:
 			}
 		case <-time.After(time.Second * 5):
 			return fmt.Errorf("timed out waiting for RTP packet")
@@ -172,10 +176,11 @@ func (h *Handlers) rtspFlow(rtspURL string) (*RTSPFlowResponse, error) {
 			return nil, err
 		}
 		req.SetTrackID(t.ID)
-		ich, _ := req.GetInterleavedChannels()
-		rtspFlowRes.Interleaved = append(rtspFlowRes.Interleaved,
+		iCh, _ := req.GetInterleavedChannels()
+		rtspFlowRes.Interleaved = append(
+			rtspFlowRes.Interleaved,
 			types.Interleaved{
-				InterleavedChannels: ich,
+				InterleavedChannels: iCh,
 				TrackType:           t.TrackType,
 			})
 		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
@@ -255,17 +260,4 @@ func (h *Handlers) errorWaiting(ctx context.Context, rtspRes *RTSPFlowResponse) 
 			return
 		}
 	}
-}
-
-func buildOutputString(response *rtsp_client.RTSPResponse) string {
-	var output strings.Builder
-	output.WriteString(response.StatusLine)
-	output.WriteString("\r\n")
-	for k, v := range response.Header {
-		output.WriteString(fmt.Sprintf("%s: %s", k, v[0]))
-		output.WriteString("\r\n")
-	}
-	output.WriteString("\r\n")
-	output.WriteString(string(response.Body))
-	return output.String()
 }

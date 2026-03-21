@@ -50,7 +50,6 @@ func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtsp
 				return err
 			}
 			channelByte, _ := c.reader.ReadByte()
-			channel := types.RTPType(channelByte)
 
 			lenBuf := make([]byte, 2)
 			if _, err = io.ReadFull(c.reader, lenBuf); err != nil {
@@ -63,9 +62,8 @@ func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtsp
 			}
 
 			rtpCh <- types.RTPPacket{
-				Type:    channel,
 				Payload: payload,
-				Channel: channelByte,
+				Channel: int(channelByte),
 			}
 		case 'R': // RTSP
 			h, getHeadersErr := c.readRTSPHeaders()

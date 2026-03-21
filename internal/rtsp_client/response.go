@@ -50,18 +50,26 @@ func (res *RTSPResponse) GetTrackIDs() ([]types.Track, error) {
 	return trackIDs, nil
 }
 
-func (res *RTSPResponse) GetCodecs() (map[string]types.CodecType, error) {
-	codecMap := make(map[string]types.CodecType)
+func (res *RTSPResponse) GetCodecs() (map[types.TrackType]types.CodecType, error) {
+	codecMap := make(map[types.TrackType]types.CodecType)
 	sdpSess, err := sdp.ParseString(string(res.Body))
 	if err != nil {
 		return nil, err
 	}
 	for _, m := range sdpSess.Media {
+		var trackType types.TrackType
+		switch m.Type {
+		case "audio":
+			trackType = types.TrackTypeAudio
+		case "video":
+			trackType = types.TrackTypeVideo
+		}
+
 		switch strings.ToLower(m.Format[0].Name) {
 		case "h264":
-			codecMap[m.Type] = types.H264
+			codecMap[trackType] = types.H264
 		case "h265":
-			codecMap[m.Type] = types.H265
+			codecMap[trackType] = types.H265
 		}
 	}
 	return codecMap, nil
