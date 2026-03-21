@@ -81,6 +81,7 @@ func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPac
 
 			switch rtpType {
 			case types.RTPTypeAudio:
+				break
 			case types.RTPTypeVideo:
 				err := vp.Push(rtpPacket.Payload)
 				if err != nil {
@@ -97,7 +98,9 @@ func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPac
 					}
 				}
 			case types.RTCPTypeAudio:
+				break
 			case types.RTCPTypeVideo:
+				break
 			}
 		case <-time.After(time.Second * 5):
 			return fmt.Errorf("timed out waiting for RTP packet")
