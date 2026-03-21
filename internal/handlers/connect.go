@@ -26,7 +26,7 @@ func (h *Handlers) HandleConnect(ctx context.Context) {
 			return
 		}
 
-		res, err := h.rtspFlow(h.rtspURL)
+		rtspRes, err := h.rtspFlow(h.rtspURL)
 		if err != nil {
 			h.ui.ShowError(err)
 			return
@@ -45,14 +45,14 @@ func (h *Handlers) HandleConnect(ctx context.Context) {
 		}()
 
 		go func() {
-			err = h.readDataChannels(ctx, rtpCh, rtspCh, res.codecs["video"])
+			err = h.readDataChannels(ctx, rtpCh, rtspCh, rtspRes.codecs["video"])
 			if err != nil {
 				h.cancel(err)
 			}
 		}()
 
 		go h.updateCounters(ctx)
-		go h.errorWaiting(ctx, res)
+		go h.errorWaiting(ctx, rtspRes)
 	}()
 }
 
@@ -164,12 +164,20 @@ func (h *Handlers) rtspFlow(rtspURL string) (*RTSPFlowResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	rtspFlowRes.Interleaved = make([]types.Interleaved, len(trackIDs))
 	for _, t := range trackIDs {
 		req, err = h.client.NewRequest(types.MethodSetup, rtspURL)
 		if err != nil {
 			return nil, err
 		}
-		req.SetTrackID(t)
+		req.SetTrackID(t.ID)
+		ich, _ := req.GetInterleavedChannels()
+		rtspFlowRes.Interleaved = append(rtspFlowRes.Interleaved,
+			types.Interleaved{
+				InterleavedChannels: ich,
+				TrackType:           t.TrackType,
+			})
 		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
 		setupRes, setupErr := h.client.Do(req)
 		if setupErr != nil {

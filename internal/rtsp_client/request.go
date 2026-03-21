@@ -51,9 +51,20 @@ func (r *Request) SetSessionID(sessionID string) {
 	r.Header.Add("Session", s)
 }
 
-func (r *Request) SetTrackID(trackID string) {
+func (r *Request) SetTrackID(trackID string) error {
+	if r.Method != types.MethodSetup {
+		return fmt.Errorf("SetTrackID only supports SETUP method")
+	}
 	r.trackID, _ = strconv.Atoi(trackID)
 	r.URL = *r.URL.JoinPath(fmt.Sprintf("/trackID=%s", trackID))
+	return nil
+}
+
+func (r *Request) GetInterleavedChannels() ([]int, error) {
+	if r.Method != types.MethodSetup && r.trackID != 0 {
+		return nil, fmt.Errorf("GetInterleaved only supports SETUP method")
+	}
+	return []int{r.trackID * 2, r.trackID*2 + 1}, nil
 }
 
 func (r *Request) BuildRequest() string {

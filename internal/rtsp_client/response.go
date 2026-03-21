@@ -22,8 +22,8 @@ func (res *RTSPResponse) GetSessionID() string {
 	return session
 }
 
-func (res *RTSPResponse) GetTrackIDs() ([]string, error) {
-	trackIDs := make([]string, 0, 2)
+func (res *RTSPResponse) GetTrackIDs() ([]types.Track, error) {
+	trackIDs := make([]types.Track, 0, 2)
 
 	sdpSess, err := sdp.ParseString(string(res.Body))
 	if err != nil {
@@ -33,7 +33,14 @@ func (res *RTSPResponse) GetTrackIDs() ([]string, error) {
 		for _, attr := range track.Attributes {
 			if attr.Name == "control" {
 				trackID := strings.Split(attr.Value, "=")[1]
-				trackIDs = append(trackIDs, trackID)
+				t := types.Track{ID: trackID}
+				switch track.Type {
+				case "audio":
+					t.TrackType = types.TrackTypeAudio
+				case "video":
+					t.TrackType = types.TrackTypeVideo
+				}
+				trackIDs = append(trackIDs, t)
 			}
 		}
 	}

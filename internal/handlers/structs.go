@@ -27,6 +27,7 @@ func NewHandlers(client *rtsp_client.Client, widgets *ui.Widgets) *Handlers {
 }
 
 type RTSPFlowResponse struct {
-	codecs   map[string]types.CodecType
-	sessions map[string]struct{}
+	codecs      map[string]types.CodecType
+	sessions    map[string]struct{}
+	Interleaved []types.Interleaved
 }

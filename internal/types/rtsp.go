@@ -2,6 +2,23 @@ package types
 
 import "net/textproto"
 
+type TrackType int
+
+const (
+	TrackTypeAudio TrackType = iota
+	TrackTypeVideo
+)
+
+type Track struct {
+	TrackType TrackType
+	ID        string
+}
+
+type Interleaved struct {
+	TrackType           TrackType
+	InterleavedChannels []int
+}
+
 type RTSPMethod string
 
 const (
