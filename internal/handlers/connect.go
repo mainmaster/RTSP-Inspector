@@ -149,7 +149,7 @@ func (h *Handlers) rtspFlow(rtspURL string) (*RTSPFlowResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	h.ui.AddLogEntry(req.Method, buildOutputString(res), false)
+	h.ui.AddLogEntry(req.Method, buildOutputString(describeRes), false)
 	if describeRes.StatusCode != 200 {
 		return nil, fmt.Errorf(describeRes.StatusLine)
 	}
