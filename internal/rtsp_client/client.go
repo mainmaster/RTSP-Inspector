@@ -31,13 +31,12 @@ func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtsp
 		close(rtpCh)
 	}()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-		}
+	go func() {
+		<-ctx.Done()
+		c.conn.Close()
+	}()
 
+	for {
 		peek, err := c.reader.Peek(1)
 		if err != nil {
 			return err // EOF
@@ -91,11 +90,15 @@ func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtsp
 	}
 }
 
-func (c *Client) Connect(u url.URL) error {
+func (c *Client) Connect(ctx context.Context, u url.URL) error {
 	c.csec = 1
 	c.digestAuth = auth.DigestAuth{}
 
-	conn, err := net.Dial("tcp", u.Host)
+	d := net.Dialer{
+		Timeout: 5 * time.Second,
+	}
+
+	conn, err := d.DialContext(ctx, "tcp", u.Host)
 	if err != nil {
 		return err
 	}

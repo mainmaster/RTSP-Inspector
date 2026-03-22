@@ -19,7 +19,7 @@ func (h *Handlers) HandleConnect(ctx context.Context) {
 	h.rtspURL = rtspURL
 
 	go func() {
-		err := h.connect(h.rtspURL)
+		err := h.connect(ctx, h.rtspURL)
 		if err != nil {
 			h.ui.ShowError(err)
 			return
@@ -212,13 +212,13 @@ func (h *Handlers) rtspFlow(rtspURL string) (*RTSPFlowResponse, error) {
 	return rtspFlowRes, nil
 }
 
-func (h *Handlers) connect(rtspURL string) error {
+func (h *Handlers) connect(ctx context.Context, rtspURL string) error {
 	u, err := url.Parse(rtspURL)
 	if err != nil {
 		return err
 	}
 
-	err = h.client.Connect(*u)
+	err = h.client.Connect(ctx, *u)
 	if err != nil {
 		return err
 	}
