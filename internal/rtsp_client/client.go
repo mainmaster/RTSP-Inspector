@@ -234,10 +234,7 @@ func (c *Client) SetCredentials(credentials Credentials) {
 }
 
 func (c *Client) IsEmptyConnection() bool {
-	if c.conn == nil {
-		return true
-	}
-	return false
+	return c.conn == nil
 }
 
 func (c *Client) SetUseUDP(use bool) {
