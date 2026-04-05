@@ -5,12 +5,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"rtsp-inspector/internal/processor"
 	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/internal/types"
 	"time"
-	"net"
+
 	"github.com/pion/rtcp"
 )
 
@@ -253,7 +254,10 @@ func (h *Handlers) sendSetup(rtspURL string, trackIDs []types.Track) (map[string
 		if err != nil {
 			return nil, nil, err
 		}
-		req.SetTrackID(t.ID)
+		err = req.SetTrackID(t.ID)
+		if err != nil {
+			return nil, nil, err
+		}
 		iCh, _ := req.GetInterleavedChannels()
 		interleaved[i] = types.Interleaved{
 			InterleavedChannels: iCh,
@@ -327,7 +331,7 @@ func (h *Handlers) updateNALUCounter() {
 
 func (h *Handlers) errorWaiting(ctx context.Context, rtspRes *RTSPFlowResponse) {
 	<-ctx.Done()
-	for s, _ := range rtspRes.sessions {
+	for s := range rtspRes.sessions {
 		req, err := h.client.NewRequest(types.MethodTeardown, h.rtspURL)
 		if err != nil {
 			return
