@@ -10,6 +10,8 @@ import (
 	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/internal/types"
 	"time"
+
+	"github.com/pion/rtcp"
 )
 
 const (
@@ -142,9 +144,11 @@ func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPac
 					}
 				}
 			case types.RTCPTypeAudio:
-				h.updater.AddLogEntry(types.MethodRTCPAudio, fmt.Sprintf("RTCP Packet:\n%s", hex.Dump(rtpPacket.Payload)), false)
+				decoded := h.decodeRTCP(rtpPacket.Payload)
+				h.updater.AddLogEntry(types.MethodRTCPAudio, fmt.Sprintf("RTCP Packet:\n%s\nDecoded:\n%s", hex.Dump(rtpPacket.Payload), decoded), false)
 			case types.RTCPTypeVideo:
-				h.updater.AddLogEntry(types.MethodRTCPVideo, fmt.Sprintf("RTCP Packet:\n%s", hex.Dump(rtpPacket.Payload)), false)
+				decoded := h.decodeRTCP(rtpPacket.Payload)
+				h.updater.AddLogEntry(types.MethodRTCPVideo, fmt.Sprintf("RTCP Packet:\n%s\nDecoded:\n%s", hex.Dump(rtpPacket.Payload), decoded), false)
 			}
 		case <-time.After(rtpTimeout):
 			return fmt.Errorf("timed out waiting for RTP packet")
@@ -310,4 +314,31 @@ func (h *Handlers) errorWaiting(ctx context.Context, rtspRes *RTSPFlowResponse) 
 			return
 		}
 	}
+}
+
+func (h *Handlers) decodeRTCP(data []byte) string {
+	packets, err := rtcp.Unmarshal(data)
+	if err != nil {
+		return fmt.Sprintf("Failed to decode RTCP: %v", err)
+	}
+	var decoded string
+	for _, p := range packets {
+		switch pkt := p.(type) {
+		case *rtcp.ReceiverReport:
+			decoded += fmt.Sprintf("ReceiverReport: SSRC=%d, Reports=%d\n", pkt.SSRC, len(pkt.Reports))
+		case *rtcp.SenderReport:
+			decoded += fmt.Sprintf("SenderReport: SSRC=%d, NTP=%d, RTP=%d\n", pkt.SSRC, pkt.NTPTime, pkt.RTPTime)
+		case *rtcp.SourceDescription:
+			decoded += fmt.Sprintf("SourceDescription: Chunks=%d\n", len(pkt.Chunks))
+		case *rtcp.Goodbye:
+			decoded += fmt.Sprintf("Goodbye: Sources=%v\n", pkt.Sources)
+		case *rtcp.PictureLossIndication:
+			decoded += fmt.Sprintf("PictureLossIndication: MediaSSRC=%d\n", pkt.MediaSSRC)
+		case *rtcp.TransportLayerNack:
+			decoded += fmt.Sprintf("TransportLayerNack: MediaSSRC=%d, Nacks=%d\n", pkt.MediaSSRC, len(pkt.Nacks))
+		default:
+			decoded += fmt.Sprintf("Unknown RTCP Packet: %T\n", p)
+		}
+	}
+	return decoded
 }
