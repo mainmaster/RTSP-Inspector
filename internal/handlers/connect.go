@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
@@ -141,9 +142,9 @@ func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPac
 					}
 				}
 			case types.RTCPTypeAudio:
-				h.updater.AddLogEntry(types.MethodRTCPAudio, fmt.Sprintf("RTCP Packet, length: %d bytes", len(rtpPacket.Payload)), false)
+				h.updater.AddLogEntry(types.MethodRTCPAudio, fmt.Sprintf("RTCP Packet:\n%s", hex.Dump(rtpPacket.Payload)), false)
 			case types.RTCPTypeVideo:
-				h.updater.AddLogEntry(types.MethodRTCPVideo, fmt.Sprintf("RTCP Packet, length: %d bytes", len(rtpPacket.Payload)), false)
+				h.updater.AddLogEntry(types.MethodRTCPVideo, fmt.Sprintf("RTCP Packet:\n%s", hex.Dump(rtpPacket.Payload)), false)
 			}
 		case <-time.After(rtpTimeout):
 			return fmt.Errorf("timed out waiting for RTP packet")
