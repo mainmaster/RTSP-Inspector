@@ -33,7 +33,10 @@ func (c *Client) Setup(rtspURL string, trackID string) (*RTSPResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.SetTrackID(trackID)
+	err = req.SetTrackID(trackID)
+	if err != nil {
+		return nil, err
+	}
 
 	res, err := c.Do(req)
 	if err != nil {
