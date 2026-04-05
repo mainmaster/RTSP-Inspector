@@ -28,7 +28,7 @@ type LogEntry struct {
 type Widgets struct {
 	window        fyne.Window
 	urlEntry      *widget.Entry
-	transportSelect *widget.RadioGroup
+	transportSelect *widget.Select
 	BtnConnect    *widget.Button
 	rtpForm       *widget.Form
 	rtpLabels     map[types.RTPType]*widget.Label
@@ -52,7 +52,7 @@ func NewUIWidgets(win fyne.Window) *Widgets {
 	}
 	ui.urlEntry.SetText(defaultRTSP)
 
-	ui.transportSelect = widget.NewRadioGroup([]string{"TCP", "UDP"}, nil)
+	ui.transportSelect = widget.NewSelect([]string{"TCP", "UDP"}, nil)
 	ui.transportSelect.SetSelected("TCP")
 
 	ui.detailView = widget.NewMultiLineEntry()
