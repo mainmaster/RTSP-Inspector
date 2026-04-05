@@ -49,11 +49,11 @@ var NALUNames = map[NALUType]string{
 	NALU_UNKNOWN: "UNKNOWN",
 
 	// H.264 (AVC)
-	H264_NALU_IDR:      "IDR Frame (Keyframe)",
-	H264_NALU_NON_IDR:  "P/B-Frame (Delta)",
-	H264_NALU_SPS:      "SPS (Sequence)",
-	H264_NALU_PPS:      "PPS (Picture)",
-	H264_NALU_SEI:      "SEI Metadata",
+	H264_NALU_IDR:     "IDR Frame (Keyframe)",
+	H264_NALU_NON_IDR: "P/B-Frame (Delta)",
+	H264_NALU_SPS:     "SPS (Sequence)",
+	H264_NALU_PPS:     "PPS (Picture)",
+	H264_NALU_SEI:     "SEI Metadata",
 
 	// H.265 (HEVC)
 	H265_NALU_TSA_N:      "TSA_N (Temporal Access)",
