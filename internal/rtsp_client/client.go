@@ -14,6 +14,11 @@ import (
 	"time"
 )
 
+const (
+	dialTimeout  = 5 * time.Second
+	readDeadline = 3 * time.Second
+)
+
 type Client struct {
 	conn       net.Conn
 	reader     *bufio.Reader
@@ -83,7 +88,7 @@ func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtsp
 			return errors.New("RTP header not supported")
 		}
 
-		err = c.conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		err = c.conn.SetReadDeadline(time.Now().Add(readDeadline))
 		if err != nil {
 			return err
 		}
@@ -95,7 +100,7 @@ func (c *Client) Connect(ctx context.Context, u url.URL) error {
 	c.digestAuth = auth.DigestAuth{}
 
 	d := net.Dialer{
-		Timeout: 5 * time.Second,
+		Timeout: dialTimeout,
 	}
 
 	conn, err := d.DialContext(ctx, "tcp", u.Host)

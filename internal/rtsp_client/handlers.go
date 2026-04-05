@@ -59,7 +59,7 @@ func (c *Client) Play(rtspURL string, sessionID string) (*RTSPResponse, error) {
 }
 
 func (c *Client) Teardown(rtspURL string, sessionID string) (*RTSPResponse, error) {
-	req, err := c.NewRequest(types.MethodPlay, rtspURL)
+	req, err := c.NewRequest(types.MethodTeardown, rtspURL)
 	if err != nil {
 		return nil, err
 	}

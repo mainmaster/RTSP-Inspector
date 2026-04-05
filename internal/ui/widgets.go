@@ -121,7 +121,7 @@ func (ui *Widgets) UpdateRTPCounter(counter map[types.RTPType]int) {
 		}
 
 		for rtp, count := range counter {
-			if _, lux := ui.rtpLabels[rtp]; !lux {
+			if _, exists := ui.rtpLabels[rtp]; !exists {
 				name := types.RTPTypeNames[rtp]
 				if name == "" {
 					continue
@@ -145,7 +145,7 @@ func (ui *Widgets) UpdateNALUCounter(counter map[types.NALUType]int) {
 		newElementAdded := false
 
 		for nalu, count := range counter {
-			if _, lux := ui.naluLabels[nalu]; !lux {
+			if _, exists := ui.naluLabels[nalu]; !exists {
 				name := types.NALUNames[nalu]
 				if name == "" {
 					continue

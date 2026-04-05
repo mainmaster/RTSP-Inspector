@@ -11,8 +11,15 @@ import (
 	"time"
 )
 
+const (
+	connectionDelay      = 1 * time.Second
+	rtpTimeout           = 5 * time.Second
+	keepaliveInterval    = 20 * time.Second
+	counterUpdateInterval = 200 * time.Millisecond
+)
+
 func (h *Handlers) HandleConnect(ctx context.Context) {
-	rtspURL := h.ui.GetURL()
+	rtspURL := h.updater.GetURL()
 	if rtspURL == "" {
 		return
 	}
@@ -21,37 +28,73 @@ func (h *Handlers) HandleConnect(ctx context.Context) {
 	go func() {
 		err := h.connect(ctx, h.rtspURL)
 		if err != nil {
-			h.ui.ShowError(err)
+			h.handleError(err, "connection failed")
 			return
 		}
 
-		rtspRes, err := h.rtspFlow(h.rtspURL)
+		rtspRes, err := h.processRTSPFlow(h.rtspURL)
 		if err != nil {
-			h.ui.ShowError(err)
+			h.handleError(err, "RTSP flow failed")
 			return
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(connectionDelay)
 
 		rtpCh := make(chan types.RTPPacket)
 		rtspCh := make(chan rtsp_client.RTSPResponse)
 
-		go func() {
-			err = h.client.RTPReader(ctx, rtpCh, rtspCh)
-			if err != nil {
-				h.cancel(err)
-			}
-		}()
-
-		go func() {
-			err = h.readDataChannels(ctx, rtpCh, rtspCh, rtspRes)
-			if err != nil {
-				h.cancel(err)
-			}
-		}()
+		h.startRTPReader(ctx, rtpCh, rtspCh)
+		h.handleDataChannels(ctx, rtpCh, rtspCh, rtspRes)
 
 		go h.updateCounters(ctx)
 		go h.errorWaiting(ctx, rtspRes)
+	}()
+}
+
+func (h *Handlers) processRTSPFlow(rtspURL string) (*RTSPFlowResponse, error) {
+	rtspFlowRes := &RTSPFlowResponse{}
+
+	err := h.sendOptions(rtspURL)
+	if err != nil {
+		return nil, err
+	}
+
+	codecs, trackIDs, err := h.sendDescribe(rtspURL)
+	if err != nil {
+		return nil, err
+	}
+	rtspFlowRes.codecs = codecs
+
+	sessions, interleaved, err := h.sendSetup(rtspURL, trackIDs)
+	if err != nil {
+		return nil, err
+	}
+	rtspFlowRes.sessions = sessions
+	rtspFlowRes.Interleaved = interleaved
+
+	err = h.sendPlay(rtspURL, sessions)
+	if err != nil {
+		return nil, err
+	}
+
+	return rtspFlowRes, nil
+}
+
+func (h *Handlers) startRTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtspCh chan rtsp_client.RTSPResponse) {
+	go func() {
+		err := h.client.RTPReader(ctx, rtpCh, rtspCh)
+		if err != nil {
+			h.cancel(err)
+		}
+	}()
+}
+
+func (h *Handlers) handleDataChannels(ctx context.Context, rtpCh chan types.RTPPacket, rtspCh chan rtsp_client.RTSPResponse, rtspRes *RTSPFlowResponse) {
+	go func() {
+		err := h.readDataChannels(ctx, rtpCh, rtspCh, rtspRes)
+		if err != nil {
+			h.cancel(err)
+		}
 	}()
 }
 
@@ -60,7 +103,7 @@ func (h *Handlers) SetCtxCancel(cancel context.CancelCauseFunc) {
 }
 
 func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPacket, rtspCh chan rtsp_client.RTSPResponse, rtspRes *RTSPFlowResponse) error {
-	rtspKeepaliveTicker := time.NewTicker(20 * time.Second)
+	rtspKeepaliveTicker := time.NewTicker(keepaliveInterval)
 	vp := processor.NewVideoProcessor(rtspRes.codecs[types.TrackTypeVideo])
 	interleavedMap := getMapFromInterleaved(rtspRes)
 
@@ -70,7 +113,7 @@ func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPac
 			if !ok {
 				return nil
 			}
-			h.ui.AddLogEntry(types.MethodOptions, buildOutputString(&rtspPacket), false)
+			h.updater.AddLogEntry(types.MethodOptions, buildOutputString(&rtspPacket), false)
 		case rtpPacket, ok := <-rtpCh:
 			if !ok {
 				return nil
@@ -102,11 +145,11 @@ func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPac
 			case types.RTCPTypeVideo:
 				break
 			}
-		case <-time.After(time.Second * 5):
+		case <-time.After(rtpTimeout):
 			return fmt.Errorf("timed out waiting for RTP packet")
 		case <-rtspKeepaliveTicker.C:
 			req, _ := h.client.NewRequest(types.MethodOptions, h.rtspURL)
-			h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+			h.updater.AddLogEntry(req.Method, req.BuildRequest(), true)
 			err := h.client.Send(req)
 			if err != nil {
 				return err
@@ -118,7 +161,7 @@ func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPac
 }
 
 func (h *Handlers) updateCounters(ctx context.Context) {
-	uiTicker := time.NewTicker(200 * time.Millisecond)
+	uiTicker := time.NewTicker(counterUpdateInterval)
 	defer uiTicker.Stop()
 	for {
 		select {
@@ -131,85 +174,88 @@ func (h *Handlers) updateCounters(ctx context.Context) {
 	}
 }
 
-func (h *Handlers) rtspFlow(rtspURL string) (*RTSPFlowResponse, error) {
-	rtspFlowRes := &RTSPFlowResponse{}
-
+func (h *Handlers) sendOptions(rtspURL string) error {
 	req, err := h.client.NewRequest(types.MethodOptions, rtspURL)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+	h.updater.AddLogEntry(req.Method, req.BuildRequest(), true)
 	res, err := h.client.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	h.ui.AddLogEntry(req.Method, buildOutputString(res), false)
+	h.updater.AddLogEntry(req.Method, buildOutputString(res), false)
+	return nil
+}
 
-	req, err = h.client.NewRequest(types.MethodDescribe, rtspURL)
+func (h *Handlers) sendDescribe(rtspURL string) (map[types.TrackType]types.CodecType, []types.Track, error) {
+	req, err := h.client.NewRequest(types.MethodDescribe, rtspURL)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+	h.updater.AddLogEntry(req.Method, req.BuildRequest(), true)
 
 	describeRes, err := h.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	h.ui.AddLogEntry(req.Method, buildOutputString(describeRes), false)
+	h.updater.AddLogEntry(req.Method, buildOutputString(describeRes), false)
 	if describeRes.StatusCode != 200 {
-		return nil, fmt.Errorf(describeRes.StatusLine)
+		return nil, nil, fmt.Errorf(describeRes.StatusLine)
 	}
 	codecs, err := describeRes.GetCodecs()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	rtspFlowRes.codecs = codecs
-
-	rtspFlowRes.sessions = make(map[string]struct{})
 	trackIDs, err := describeRes.GetTrackIDs()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	return codecs, trackIDs, nil
+}
 
-	rtspFlowRes.Interleaved = make([]types.Interleaved, len(trackIDs))
-	for _, t := range trackIDs {
-		req, err = h.client.NewRequest(types.MethodSetup, rtspURL)
+func (h *Handlers) sendSetup(rtspURL string, trackIDs []types.Track) (map[string]struct{}, []types.Interleaved, error) {
+	sessions := make(map[string]struct{})
+	interleaved := make([]types.Interleaved, len(trackIDs))
+	for i, t := range trackIDs {
+		req, err := h.client.NewRequest(types.MethodSetup, rtspURL)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		req.SetTrackID(t.ID)
 		iCh, _ := req.GetInterleavedChannels()
-		rtspFlowRes.Interleaved = append(
-			rtspFlowRes.Interleaved,
-			types.Interleaved{
-				InterleavedChannels: iCh,
-				TrackType:           t.TrackType,
-			})
-		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+		interleaved[i] = types.Interleaved{
+			InterleavedChannels: iCh,
+			TrackType:           t.TrackType,
+		}
+		h.updater.AddLogEntry(req.Method, req.BuildRequest(), true)
 		setupRes, setupErr := h.client.Do(req)
 		if setupErr != nil {
-			return nil, setupErr
+			return nil, nil, setupErr
 		}
-		h.ui.AddLogEntry(req.Method, buildOutputString(setupRes), false)
-		rtspFlowRes.sessions[setupRes.GetSessionID()] = struct{}{}
+		h.updater.AddLogEntry(req.Method, buildOutputString(setupRes), false)
+		sessions[setupRes.GetSessionID()] = struct{}{}
 	}
+	return sessions, interleaved, nil
+}
 
-	for sessionID, _ := range rtspFlowRes.sessions {
-		req, err = h.client.NewRequest(types.MethodPlay, rtspURL)
+func (h *Handlers) sendPlay(rtspURL string, sessions map[string]struct{}) error {
+	for sessionID := range sessions {
+		req, err := h.client.NewRequest(types.MethodPlay, rtspURL)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		req.SetSessionID(sessionID)
-		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+		h.updater.AddLogEntry(req.Method, req.BuildRequest(), true)
 
-		res, err = h.client.Do(req)
+		res, err := h.client.Do(req)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		h.ui.AddLogEntry(req.Method, buildOutputString(res), false)
+		h.updater.AddLogEntry(req.Method, buildOutputString(res), false)
 	}
-	return rtspFlowRes, nil
+	return nil
 }
 
 func (h *Handlers) connect(ctx context.Context, rtspURL string) error {
@@ -223,24 +269,24 @@ func (h *Handlers) connect(ctx context.Context, rtspURL string) error {
 		return err
 	}
 
-	h.ui.UpdateConnectStatus(true)
+	h.updater.UpdateConnectStatus(true)
 	h.IsConnected = true
 
 	h.si.ClearCounters()
-	h.ui.ClearCounters()
-	h.ui.ClearLogs()
+	h.updater.ClearCounters()
+	h.updater.ClearLogs()
 
 	return nil
 }
 
 func (h *Handlers) updateRTPCounter() {
 	counter := h.si.GetRTPCounter()
-	h.ui.UpdateRTPCounter(counter)
+	h.updater.UpdateRTPCounter(counter)
 }
 
 func (h *Handlers) updateNALUCounter() {
 	counter := h.si.GetNALUCounter()
-	h.ui.UpdateNALUCounter(counter)
+	h.updater.UpdateNALUCounter(counter)
 }
 
 func (h *Handlers) errorWaiting(ctx context.Context, rtspRes *RTSPFlowResponse) {
@@ -251,11 +297,11 @@ func (h *Handlers) errorWaiting(ctx context.Context, rtspRes *RTSPFlowResponse) 
 			return
 		}
 		req.SetSessionID(s)
-		h.ui.AddLogEntry(req.Method, req.BuildRequest(), true)
+		h.updater.AddLogEntry(req.Method, req.BuildRequest(), true)
 
 		err = context.Cause(ctx)
 		if err != nil && !errors.Is(err, context.Canceled) {
-			h.ui.ShowError(err)
+			h.handleError(err, "teardown error")
 		}
 
 		err = h.client.Send(req)
