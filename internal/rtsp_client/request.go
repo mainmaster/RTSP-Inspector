@@ -100,3 +100,7 @@ func (r *Request) BuildRequest() string {
 	b.WriteString("\r\n")
 	return b.String()
 }
+
+func (r *Request) SetTransport(transport string) {
+	r.Header.Add("Transport", transport)
+}

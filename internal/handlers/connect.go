@@ -27,6 +27,8 @@ func (h *Handlers) HandleConnect(ctx context.Context) {
 		return
 	}
 	h.rtspURL = rtspURL
+	transport := h.updater.GetTransport()
+	h.useUDP = transport == "UDP"
 
 	go func() {
 		err := h.connect(ctx, h.rtspURL)
@@ -233,6 +235,9 @@ func (h *Handlers) sendSetup(rtspURL string, trackIDs []types.Track) (map[string
 		interleaved[i] = types.Interleaved{
 			InterleavedChannels: iCh,
 			TrackType:           t.TrackType,
+		}
+		if h.useUDP {
+			req.SetTransport("RTP/AVP;unicast;client_port=5000-5001")
 		}
 		h.updater.AddLogEntry(req.Method, req.BuildRequest(), true)
 		setupRes, setupErr := h.client.Do(req)

@@ -13,6 +13,7 @@ type Handlers struct {
 	updater     UIUpdater
 	client      *rtsp_client.Client
 	IsConnected bool
+	useUDP      bool
 	si          *processor.StreamInspector
 	cancel      context.CancelCauseFunc
 }

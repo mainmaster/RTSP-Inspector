@@ -26,16 +26,17 @@ type LogEntry struct {
 }
 
 type Widgets struct {
-	window     fyne.Window
-	urlEntry   *widget.Entry
-	BtnConnect *widget.Button
-	rtpForm    *widget.Form
-	rtpLabels  map[types.RTPType]*widget.Label
-	naluLabels map[types.NALUType]*widget.Label
-	naluForm   *widget.Form
-	logs       []LogEntry
-	logList    *widget.List
-	detailView *widget.Entry // Правая часть: содержимое лога
+	window        fyne.Window
+	urlEntry      *widget.Entry
+	transportSelect *widget.RadioGroup
+	BtnConnect    *widget.Button
+	rtpForm       *widget.Form
+	rtpLabels     map[types.RTPType]*widget.Label
+	naluLabels    map[types.NALUType]*widget.Label
+	naluForm      *widget.Form
+	logs          []LogEntry
+	logList       *widget.List
+	detailView    *widget.Entry // Правая часть: содержимое лога
 }
 
 func NewUIWidgets(win fyne.Window) *Widgets {
@@ -50,6 +51,9 @@ func NewUIWidgets(win fyne.Window) *Widgets {
 		logs:       []LogEntry{},
 	}
 	ui.urlEntry.SetText(defaultRTSP)
+
+	ui.transportSelect = widget.NewRadioGroup([]string{"TCP", "UDP"}, nil)
+	ui.transportSelect.SetSelected("TCP")
 
 	ui.detailView = widget.NewMultiLineEntry()
 	ui.detailView.Wrapping = fyne.TextWrapBreak
@@ -110,6 +114,10 @@ func (ui *Widgets) UpdateConnectStatus(isConnected bool) {
 
 func (ui *Widgets) GetURL() string {
 	return ui.urlEntry.Text
+}
+
+func (ui *Widgets) GetTransport() string {
+	return ui.transportSelect.Selected
 }
 
 func (ui *Widgets) UpdateRTPCounter(counter map[types.RTPType]int) {
