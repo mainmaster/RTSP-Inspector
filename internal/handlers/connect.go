@@ -10,7 +10,7 @@ import (
 	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/internal/types"
 	"time"
-
+	"net"
 	"github.com/pion/rtcp"
 )
 
@@ -70,6 +70,29 @@ func (h *Handlers) processRTSPFlow(rtspURL string) (*RTSPFlowResponse, error) {
 	}
 	rtspFlowRes.codecs = codecs
 
+	if h.useUDP {
+		for i := 0; i < len(trackIDs); i++ {
+			port := 5000 + i*2
+			rtpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port))
+			if err != nil {
+				return nil, err
+			}
+			rtcpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port+1))
+			if err != nil {
+				return nil, err
+			}
+			rtpConn, err := net.ListenUDP("udp", rtpAddr)
+			if err != nil {
+				return nil, err
+			}
+			rtcpConn, err := net.ListenUDP("udp", rtcpAddr)
+			if err != nil {
+				return nil, err
+			}
+			h.client.SetUDPConns(rtpConn, rtcpConn)
+		}
+	}
+
 	sessions, interleaved, err := h.sendSetup(rtspURL, trackIDs)
 	if err != nil {
 		return nil, err
@@ -110,7 +133,7 @@ func (h *Handlers) SetCtxCancel(cancel context.CancelCauseFunc) {
 func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPacket, rtspCh chan rtsp_client.RTSPResponse, rtspRes *RTSPFlowResponse) error {
 	rtspKeepaliveTicker := time.NewTicker(keepaliveInterval)
 	vp := processor.NewVideoProcessor(rtspRes.codecs[types.TrackTypeVideo])
-	interleavedMap := getMapFromInterleaved(rtspRes)
+	interleavedMap := getMapFromInterleaved(rtspRes, h.useUDP)
 
 	for {
 		select {
@@ -237,7 +260,8 @@ func (h *Handlers) sendSetup(rtspURL string, trackIDs []types.Track) (map[string
 			TrackType:           t.TrackType,
 		}
 		if h.useUDP {
-			req.SetTransport("RTP/AVP;unicast;client_port=5000-5001")
+			port := 5000 + i*2
+			req.SetTransport(fmt.Sprintf("RTP/AVP;unicast;client_port=%d-%d", port, port+1))
 		}
 		h.updater.AddLogEntry(req.Method, req.BuildRequest(), true)
 		setupRes, setupErr := h.client.Do(req)
@@ -278,6 +302,8 @@ func (h *Handlers) connect(ctx context.Context, rtspURL string) error {
 	if err != nil {
 		return err
 	}
+
+	h.client.SetUseUDP(h.useUDP)
 
 	h.updater.UpdateConnectStatus(true)
 	h.IsConnected = true
