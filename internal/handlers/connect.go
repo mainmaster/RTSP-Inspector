@@ -5,13 +5,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/pion/rtcp"
-	"net"
 	"net/url"
 	"rtsp-inspector/internal/processor"
 	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/internal/types"
 	"time"
+	"net"
+	"github.com/pion/rtcp"
 )
 
 const (
@@ -232,7 +232,7 @@ func (h *Handlers) sendDescribe(rtspURL string) (map[types.TrackType]types.Codec
 	}
 	h.updater.AddLogEntry(req.Method, buildOutputString(describeRes), false)
 	if describeRes.StatusCode != 200 {
-		return nil, nil, fmt.Errorf(describeRes.StatusLine)
+		return nil, nil, errors.New(describeRes.StatusLine)
 	}
 	codecs, err := describeRes.GetCodecs()
 	if err != nil {
