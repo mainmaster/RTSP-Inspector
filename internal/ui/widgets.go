@@ -26,17 +26,17 @@ type LogEntry struct {
 }
 
 type Widgets struct {
-	window        fyne.Window
-	urlEntry      *widget.Entry
+	window          fyne.Window
+	urlEntry        *widget.Entry
 	transportSelect *widget.Select
-	BtnConnect    *widget.Button
-	rtpForm       *widget.Form
-	rtpLabels     map[types.RTPType]*widget.Label
-	naluLabels    map[types.NALUType]*widget.Label
-	naluForm      *widget.Form
-	logs          []LogEntry
-	logList       *widget.List
-	detailView    *widget.Entry // Правая часть: содержимое лога
+	BtnConnect      *widget.Button
+	rtpForm         *widget.Form
+	rtpLabels       map[types.RTPType]*widget.Label
+	naluLabels      map[types.NALUType]*widget.Label
+	naluForm        *widget.Form
+	logs            []LogEntry
+	logList         *widget.List
+	detailView      *widget.Entry // Правая часть: содержимое лога
 }
 
 func NewUIWidgets(win fyne.Window) *Widgets {
