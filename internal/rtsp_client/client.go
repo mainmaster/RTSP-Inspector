@@ -20,11 +20,14 @@ const (
 )
 
 type Client struct {
-	conn       net.Conn
-	reader     *bufio.Reader
-	tp         *textproto.Reader
-	csec       int
-	digestAuth auth.DigestAuth
+	conn        net.Conn
+	reader      *bufio.Reader
+	tp          *textproto.Reader
+	csec        int
+	digestAuth  auth.DigestAuth
+	useUDP      bool
+	rtpUDPConn  []*net.UDPConn
+	rtcpUDPConn []*net.UDPConn
 }
 
 func NewClient() *Client {
@@ -36,6 +39,11 @@ func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtsp
 		close(rtpCh)
 	}()
 
+	if c.useUDP {
+		return c.readUDP(ctx, rtpCh, rtspCh)
+	}
+
+	// TCP interleaved
 	go func() {
 		<-ctx.Done()
 		c.conn.Close()
@@ -95,6 +103,88 @@ func (c *Client) RTPReader(ctx context.Context, rtpCh chan types.RTPPacket, rtsp
 	}
 }
 
+func (c *Client) readUDP(ctx context.Context, rtpCh chan types.RTPPacket, rtspCh chan RTSPResponse) error {
+	// Read RTSP from TCP
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				peek, err := c.reader.Peek(1)
+				if err != nil {
+					return
+				}
+				if peek[0] == 'R' {
+					h, getHeadersErr := c.readRTSPHeaders()
+					if getHeadersErr != nil {
+						return
+					}
+					b, getBodyErr := c.readRTSPBody(h.Header)
+					if getBodyErr != nil {
+						return
+					}
+					rtspCh <- RTSPResponse{
+						Headers: h,
+						Body:    b,
+					}
+				}
+			}
+		}
+	}()
+
+	// Read RTP from UDP
+	for i, conn := range c.rtpUDPConn {
+		go func(i int, conn *net.UDPConn) {
+			buf := make([]byte, 1500)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					n, _, err := conn.ReadFromUDP(buf)
+					if err != nil {
+						return
+					}
+					payload := make([]byte, n)
+					copy(payload, buf[:n])
+					rtpCh <- types.RTPPacket{
+						Payload: payload,
+						Channel: i * 2,
+					}
+				}
+			}
+		}(i, conn)
+	}
+
+	// Read RTCP from UDP
+	for i, conn := range c.rtcpUDPConn {
+		go func(i int, conn *net.UDPConn) {
+			buf := make([]byte, 1500)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					n, _, err := conn.ReadFromUDP(buf)
+					if err != nil {
+						return
+					}
+					payload := make([]byte, n)
+					copy(payload, buf[:n])
+					rtpCh <- types.RTPPacket{
+						Payload: payload,
+						Channel: i*2 + 1,
+					}
+				}
+			}
+		}(i, conn)
+	}
+
+	<-ctx.Done()
+	return nil
+}
+
 func (c *Client) Connect(ctx context.Context, u url.URL) error {
 	c.csec = 1
 	c.digestAuth = auth.DigestAuth{}
@@ -120,7 +210,20 @@ func (c *Client) Connect(ctx context.Context, u url.URL) error {
 }
 
 func (c *Client) Close() error {
-	return c.conn.Close()
+	if c.conn != nil {
+		c.conn.Close()
+	}
+	for _, conn := range c.rtpUDPConn {
+		if conn != nil {
+			conn.Close()
+		}
+	}
+	for _, conn := range c.rtcpUDPConn {
+		if conn != nil {
+			conn.Close()
+		}
+	}
+	return nil
 }
 
 func (c *Client) SetCredentials(credentials Credentials) {
@@ -133,4 +236,13 @@ func (c *Client) IsEmptyConnection() bool {
 		return true
 	}
 	return false
+}
+
+func (c *Client) SetUseUDP(use bool) {
+	c.useUDP = use
+}
+
+func (c *Client) SetUDPConns(rtpConn, rtcpConn *net.UDPConn) {
+	c.rtpUDPConn = append(c.rtpUDPConn, rtpConn)
+	c.rtcpUDPConn = append(c.rtcpUDPConn, rtcpConn)
 }
