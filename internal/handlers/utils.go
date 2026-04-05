@@ -7,8 +7,16 @@ import (
 	"strings"
 )
 
-func getMapFromInterleaved(rtspRes *RTSPFlowResponse) map[int]types.RTPType {
+func getMapFromInterleaved(rtspRes *RTSPFlowResponse, useUDP bool) map[int]types.RTPType {
 	interleavedMap := make(map[int]types.RTPType)
+	if useUDP {
+		// For UDP, assume channel 0: RTP video, 1: RTCP video, 2: RTP audio, 3: RTCP audio
+		interleavedMap[0] = types.RTPTypeVideo
+		interleavedMap[1] = types.RTCPTypeVideo
+		interleavedMap[2] = types.RTPTypeAudio
+		interleavedMap[3] = types.RTCPTypeAudio
+		return interleavedMap
+	}
 	for _, i := range rtspRes.Interleaved {
 		switch i.TrackType {
 		case types.TrackTypeVideo:

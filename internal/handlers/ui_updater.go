@@ -7,6 +7,7 @@ type UIUpdater interface {
 	ShowError(err error)
 	UpdateConnectStatus(isConnected bool)
 	GetURL() string
+	GetTransport() string
 	UpdateRTPCounter(counter map[types.RTPType]int)
 	UpdateNALUCounter(counter map[types.NALUType]int)
 	ClearCounters()
