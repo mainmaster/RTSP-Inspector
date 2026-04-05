@@ -223,6 +223,8 @@ func (c *Client) Close() error {
 			conn.Close()
 		}
 	}
+	c.rtpUDPConn = nil
+	c.rtcpUDPConn = nil
 	return nil
 }
 
