@@ -5,19 +5,19 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/pion/rtcp"
+	"net"
 	"net/url"
 	"rtsp-inspector/internal/processor"
 	"rtsp-inspector/internal/rtsp_client"
 	"rtsp-inspector/internal/types"
 	"time"
-	"net"
-	"github.com/pion/rtcp"
 )
 
 const (
-	connectionDelay      = 1 * time.Second
-	rtpTimeout           = 5 * time.Second
-	keepaliveInterval    = 20 * time.Second
+	connectionDelay       = 1 * time.Second
+	rtpTimeout            = 5 * time.Second
+	keepaliveInterval     = 20 * time.Second
 	counterUpdateInterval = 200 * time.Millisecond
 )
 
