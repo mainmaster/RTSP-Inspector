@@ -141,9 +141,9 @@ func (h *Handlers) readDataChannels(ctx context.Context, rtpCh chan types.RTPPac
 					}
 				}
 			case types.RTCPTypeAudio:
-				break
+				h.updater.AddLogEntry(types.MethodRTCPAudio, fmt.Sprintf("RTCP Packet, length: %d bytes", len(rtpPacket.Payload)), false)
 			case types.RTCPTypeVideo:
-				break
+				h.updater.AddLogEntry(types.MethodRTCPVideo, fmt.Sprintf("RTCP Packet, length: %d bytes", len(rtpPacket.Payload)), false)
 			}
 		case <-time.After(rtpTimeout):
 			return fmt.Errorf("timed out waiting for RTP packet")

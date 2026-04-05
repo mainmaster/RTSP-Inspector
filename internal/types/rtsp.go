@@ -23,12 +23,14 @@ type Interleaved struct {
 type RTSPMethod string
 
 const (
-	MethodOptions  RTSPMethod = "OPTIONS"
-	MethodDescribe RTSPMethod = "DESCRIBE"
-	MethodSetup    RTSPMethod = "SETUP"
-	MethodPlay     RTSPMethod = "PLAY"
-	MethodPause    RTSPMethod = "PAUSE"
-	MethodTeardown RTSPMethod = "TEARDOWN"
+	MethodOptions   RTSPMethod = "OPTIONS"
+	MethodDescribe  RTSPMethod = "DESCRIBE"
+	MethodSetup     RTSPMethod = "SETUP"
+	MethodPlay      RTSPMethod = "PLAY"
+	MethodPause     RTSPMethod = "PAUSE"
+	MethodTeardown  RTSPMethod = "TEARDOWN"
+	MethodRTCPAudio RTSPMethod = "RTCP Audio"
+	MethodRTCPVideo RTSPMethod = "RTCP Video"
 )
 
 type Headers struct {
