@@ -2,7 +2,7 @@ package handlers
 
 import "context"
 
-func (h *Handlers) HandelDisconnect(ctx context.Context) {
+func (h *Handlers) HandleDisconnect(ctx context.Context) {
 	if h.cancel != nil && ctx.Err() == nil {
 		h.cancel(nil)
 	}
@@ -12,5 +12,5 @@ func (h *Handlers) HandelDisconnect(ctx context.Context) {
 	}
 	h.IsConnected = false
 
-	h.ui.UpdateConnectStatus(false)
+	h.updater.UpdateConnectStatus(false)
 }

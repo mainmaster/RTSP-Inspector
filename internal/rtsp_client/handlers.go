@@ -33,7 +33,10 @@ func (c *Client) Setup(rtspURL string, trackID string) (*RTSPResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.SetTrackID(trackID)
+	err = req.SetTrackID(trackID)
+	if err != nil {
+		return nil, err
+	}
 
 	res, err := c.Do(req)
 	if err != nil {
@@ -59,7 +62,7 @@ func (c *Client) Play(rtspURL string, sessionID string) (*RTSPResponse, error) {
 }
 
 func (c *Client) Teardown(rtspURL string, sessionID string) (*RTSPResponse, error) {
-	req, err := c.NewRequest(types.MethodPlay, rtspURL)
+	req, err := c.NewRequest(types.MethodTeardown, rtspURL)
 	if err != nil {
 		return nil, err
 	}

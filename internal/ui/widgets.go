@@ -26,16 +26,17 @@ type LogEntry struct {
 }
 
 type Widgets struct {
-	window     fyne.Window
-	urlEntry   *widget.Entry
-	BtnConnect *widget.Button
-	rtpForm    *widget.Form
-	rtpLabels  map[types.RTPType]*widget.Label
-	naluLabels map[types.NALUType]*widget.Label
-	naluForm   *widget.Form
-	logs       []LogEntry
-	logList    *widget.List
-	detailView *widget.Entry // Правая часть: содержимое лога
+	window          fyne.Window
+	urlEntry        *widget.Entry
+	transportSelect *widget.Select
+	BtnConnect      *widget.Button
+	rtpForm         *widget.Form
+	rtpLabels       map[types.RTPType]*widget.Label
+	naluLabels      map[types.NALUType]*widget.Label
+	naluForm        *widget.Form
+	logs            []LogEntry
+	logList         *widget.List
+	detailView      *widget.Entry // Правая часть: содержимое лога
 }
 
 func NewUIWidgets(win fyne.Window) *Widgets {
@@ -50,6 +51,9 @@ func NewUIWidgets(win fyne.Window) *Widgets {
 		logs:       []LogEntry{},
 	}
 	ui.urlEntry.SetText(defaultRTSP)
+
+	ui.transportSelect = widget.NewSelect([]string{"TCP", "UDP"}, nil)
+	ui.transportSelect.SetSelected("TCP")
 
 	ui.detailView = widget.NewMultiLineEntry()
 	ui.detailView.Wrapping = fyne.TextWrapBreak
@@ -112,6 +116,10 @@ func (ui *Widgets) GetURL() string {
 	return ui.urlEntry.Text
 }
 
+func (ui *Widgets) GetTransport() string {
+	return ui.transportSelect.Selected
+}
+
 func (ui *Widgets) UpdateRTPCounter(counter map[types.RTPType]int) {
 	fyne.Do(func() {
 		newElementAdded := false
@@ -121,7 +129,7 @@ func (ui *Widgets) UpdateRTPCounter(counter map[types.RTPType]int) {
 		}
 
 		for rtp, count := range counter {
-			if _, lux := ui.rtpLabels[rtp]; !lux {
+			if _, exists := ui.rtpLabels[rtp]; !exists {
 				name := types.RTPTypeNames[rtp]
 				if name == "" {
 					continue
@@ -145,7 +153,7 @@ func (ui *Widgets) UpdateNALUCounter(counter map[types.NALUType]int) {
 		newElementAdded := false
 
 		for nalu, count := range counter {
-			if _, lux := ui.naluLabels[nalu]; !lux {
+			if _, exists := ui.naluLabels[nalu]; !exists {
 				name := types.NALUNames[nalu]
 				if name == "" {
 					continue

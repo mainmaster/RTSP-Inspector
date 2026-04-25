@@ -26,6 +26,6 @@ func (a *DigestAuth) GetHeader(method types.RTSPMethod, url string) string {
 
 func md5Sum(data string) string {
 	h := md5.New()
-	io.WriteString(h, data)
+	_, _ = io.WriteString(h, data)
 	return hex.EncodeToString(h.Sum(nil))
 }

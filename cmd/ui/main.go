@@ -22,7 +22,7 @@ func main() {
 
 	widgets.BtnConnect.OnTapped = func() {
 		if h.IsConnected {
-			h.HandelDisconnect(ctx)
+			h.HandleDisconnect(ctx)
 		} else {
 			ctx, cancel = context.WithCancelCause(context.Background())
 			h.SetCtxCancel(cancel)
